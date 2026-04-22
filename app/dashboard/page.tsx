@@ -1,10 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import {
   HiOutlineMagnifyingGlass,
-  HiOutlineTruck,
-  
   HiOutlineArrowRightOnRectangle,
   HiOutlineClock,
   HiOutlineCog,
@@ -15,7 +14,7 @@ import {
   FaUserAlt,
 } from "react-icons/fa";
 import { CgSearchFound } from "react-icons/cg";
-import { Settings } from "lucide-react";
+import { Settings, Zap } from "lucide-react";
 
 export default function DashboardPage() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -61,7 +60,22 @@ export default function DashboardPage() {
           </div>
         </div>
 
-       
+        <div className="relative">
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-600 transition hover:bg-zinc-200"
+          >
+            <HiOutlineCog size={20} />
+          </button>
+          {dropdownOpen && (
+            <div className="absolute right-0 top-12 w-48 rounded-2xl border border-zinc-200 bg-white p-2 shadow-lg">
+              <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-zinc-600 transition hover:bg-zinc-100">
+                <HiOutlineArrowRightOnRectangle size={16} />
+                Sair da conta
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
           {/* Header */}
@@ -71,7 +85,7 @@ export default function DashboardPage() {
                 Dashboard
               </p>
               <h1 className="mt-1 text-3xl font-black leading-tight sm:text-4xl">
-                Controle rápido da sua oficina.
+                Controle rápido da sua MotoPeças.
               </h1>
               <p className="mt-3 max-w-2xl text-sm font-medium text-zinc-600 sm:text-base">
                 Busque motos por placa, acompanhe atendimentos em aberto e veja
@@ -103,6 +117,17 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="mb-8">
+            <Image
+              src="/banner.png"
+              alt="Banner MotoCheck"
+              width={1250}
+              height={160}
+              className="h-auto w-full"
+              preload
+            />
           </div>
 
           {/* Busca */}
@@ -148,8 +173,8 @@ export default function DashboardPage() {
             </div>
 
             <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#181818] text-yellow-400">
-                <HiOutlineTruck size={20} />
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-100 text-[#181818]">
+                <Zap size={20} />
               </div>
               <p className="text-sm font-bold text-zinc-500">Em andamento</p>
               <h3 className="mt-2 text-4xl font-black text-[#181818]">12</h3>
@@ -169,15 +194,15 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="rounded-[28px] bg-[#181818] p-5 shadow-sm">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-200 text-[#181818]">
+            <div className="rounded-[28px] bg-yellow-100 p-5 shadow-sm">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#181818] text-yellow-100">
                 <HiOutlineClock size={20} />
               </div>
-              <p className="text-sm font-bold text-zinc-400">
+              <p className="text-sm font-bold text-zinc-600">
                 Tempo médio de permanência
               </p>
-              <h3 className="mt-2 text-4xl font-black text-white">2h 35m</h3>
-              <p className="mt-2 text-sm font-medium text-zinc-400">
+              <h3 className="mt-2 text-4xl font-black text-[#181818]">2h 35m</h3>
+              <p className="mt-2 text-sm font-medium text-zinc-600">
                 Média das últimas visitas
               </p>
             </div>

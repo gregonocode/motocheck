@@ -6,6 +6,7 @@ import { HiOutlineMail, HiOutlineLockClosed } from "react-icons/hi";
 
 import { CgSearchFound } from "react-icons/cg";
 import { createClient } from "../lib/supabase/client";
+import PwaInstallPrompt from "./_components/pwa-install-prompt";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,6 +44,8 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-white">
+      <PwaInstallPrompt />
+
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
         {/* Branding */}
         <section className="relative hidden overflow-hidden bg-yellow-400 lg:flex">
