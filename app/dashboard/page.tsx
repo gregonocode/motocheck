@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import VehicleSearchModal from "@/app/componets/VehicleSearchModal";
 import {
@@ -27,6 +28,7 @@ type VehicleLookupResult = {
 };
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
   const [plate, setPlate] = useState("");
@@ -101,6 +103,12 @@ export default function DashboardPage() {
     setVehicleModalOpen(true);
   }
 
+  function handleLogout() {
+    setDropdownOpen(false);
+    setHeaderDropdownOpen(false);
+    router.replace("/login");
+  }
+
   const atendimentos = [
     {
       placa: "QWE1A23",
@@ -150,7 +158,10 @@ export default function DashboardPage() {
           </button>
           {dropdownOpen && (
             <div className="absolute right-0 top-12 w-48 rounded-2xl border border-zinc-200 bg-white p-2 shadow-lg">
-              <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-zinc-600 transition hover:bg-zinc-100">
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-zinc-600 transition hover:bg-zinc-100"
+              >
                 <HiOutlineArrowRightOnRectangle size={16} />
                 Sair da conta
               </button>
@@ -190,7 +201,10 @@ export default function DashboardPage() {
                 </button>
                 {headerDropdownOpen && (
                   <div className="absolute right-0 top-16 w-48 rounded-2xl border border-zinc-200 bg-white p-2 shadow-lg">
-                    <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-zinc-600 transition hover:bg-zinc-100">
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold text-zinc-600 transition hover:bg-zinc-100"
+                    >
                       <HiOutlineArrowRightOnRectangle size={16} />
                       Sair da conta
                     </button>
