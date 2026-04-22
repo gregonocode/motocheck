@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import VehicleSearchModal from "@/app/componets/VehicleSearchModal";
+import type { VehicleData } from "@/app/componets/VehicleSearchModal";
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineArrowRightOnRectangle,
@@ -14,18 +15,7 @@ import { FaCheckCircle } from "react-icons/fa";
 import { CgSearchFound } from "react-icons/cg";
 import { Settings, Zap } from "lucide-react";
 
-type VehicleLookupResult = {
-  placa: string;
-  cadastroExiste: boolean;
-  marca?: string;
-  veiculo?: string;
-  cilindrada?: string;
-  ano?: number;
-  cor?: string;
-  cliente?: string;
-  telefone?: string;
-  status?: "Em andamento" | "Finalizada" | "Aguardando";
-};
+type VehicleLookupResult = VehicleData;
 
 export default function DashboardPage() {
   const router = useRouter();
