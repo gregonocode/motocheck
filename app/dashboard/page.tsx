@@ -1,24 +1,105 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import VehicleSearchModal from "@/app/componets/VehicleSearchModal";
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineArrowRightOnRectangle,
   HiOutlineClock,
   HiOutlineCog,
 } from "react-icons/hi2";
-import {
-  FaCamera,
-  FaCheckCircle,
-  FaUserAlt,
-} from "react-icons/fa";
+import { FaCheckCircle } from "react-icons/fa";
 import { CgSearchFound } from "react-icons/cg";
 import { Settings, Zap } from "lucide-react";
+
+type VehicleLookupResult = {
+  placa: string;
+  cadastroExiste: boolean;
+  marca?: string;
+  veiculo?: string;
+  cilindrada?: string;
+  ano?: number;
+  cor?: string;
+  cliente?: string;
+  telefone?: string;
+  status?: "Em andamento" | "Finalizada" | "Aguardando";
+};
 
 export default function DashboardPage() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
+  const [plate, setPlate] = useState("");
+  const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] =
+    useState<VehicleLookupResult | null>(null);
+
+  const vehiclesMock = useMemo(
+    () => [
+      {
+        placa: "QEA4209",
+        marca: "Honda",
+        veiculo: "Nxr 160 Bros",
+        cilindrada: "0.16",
+        ano: 2016,
+        cor: "PRETA",
+        cliente: "João Pedro",
+        telefone: "(93) 99123-4567",
+        status: "Em andamento" as const,
+        cadastroExiste: true,
+      },
+      {
+        placa: "QWE1A23",
+        marca: "Honda",
+        veiculo: "CG 125 Fan",
+        cilindrada: "0.125",
+        ano: 2013,
+        cor: "PRETA",
+        cliente: "Carlos Henrique",
+        telefone: "(93) 99999-0000",
+        status: "Finalizada" as const,
+        cadastroExiste: true,
+      },
+      {
+        placa: "ABC4D56",
+        marca: "Yamaha",
+        veiculo: "Factor 150",
+        cilindrada: "0.15",
+        ano: 2020,
+        cor: "VERMELHA",
+        cliente: "Marcos Silva",
+        telefone: "(93) 98888-1111",
+        status: "Aguardando" as const,
+        cadastroExiste: true,
+      },
+    ],
+    []
+  );
+
+  function normalizePlate(value: string) {
+    return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  }
+
+  function handleSearchVehicle() {
+    const normalized = normalizePlate(plate);
+
+    if (!normalized) return;
+
+    const found = vehiclesMock.find(
+      (item) => normalizePlate(item.placa) === normalized
+    );
+
+    if (found) {
+      setSelectedVehicle(found);
+    } else {
+      setSelectedVehicle({
+        placa: normalized,
+        cadastroExiste: false,
+      });
+    }
+
+    setVehicleModalOpen(true);
+  }
 
   const atendimentos = [
     {
@@ -148,9 +229,20 @@ export default function DashboardPage() {
                 <input
                   type="text"
                   placeholder="Ex: QWE1A23"
-                  className="w-full bg-transparent text-sm font-semibold text-[#181818] outline-none placeholder:text-zinc-400"
+                  value={plate}
+                  onChange={(e) => setPlate(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSearchVehicle();
+                    }
+                  }}
+                  className="w-full bg-transparent text-sm font-semibold uppercase text-[#181818] outline-none placeholder:text-zinc-400"
                 />
-                <button className="rounded-xl bg-[#181818] px-4 py-2 text-sm font-extrabold text-white">
+                <button
+                  onClick={handleSearchVehicle}
+                  className="rounded-xl bg-[#181818] px-4 py-2 text-sm font-extrabold text-white"
+                >
                   Buscar
                 </button>
               </div>
@@ -345,6 +437,20 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+
+          <VehicleSearchModal
+            open={vehicleModalOpen}
+            onClose={() => setVehicleModalOpen(false)}
+            vehicle={selectedVehicle}
+            onCreateNew={() => {
+              setVehicleModalOpen(false);
+              alert("Aqui você pode redirecionar para a tela de cadastro.");
+            }}
+            onOpenHistory={() => {
+              setVehicleModalOpen(false);
+              alert("Aqui você pode abrir o histórico da moto.");
+            }}
+          />
         </div>
       );
     }
