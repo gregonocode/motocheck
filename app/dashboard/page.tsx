@@ -8,6 +8,7 @@ import VehicleSearchModal, {
   VehicleSearchData,
 } from "@/app/components/VehicleSearchModal";
 import { createClient } from "@/lib/supabase/client";
+import toast from "react-hot-toast";
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineArrowRightOnRectangle,
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [searchError, setSearchError] = useState("");
   const [createVehicleModalOpen, setCreateVehicleModalOpen] = useState(false);
   const [creatingVehicle, setCreatingVehicle] = useState(false);
+  const [startingAttendance, setStartingAttendance] = useState(false);
 
   const atendimentos = [
     {
@@ -60,8 +62,8 @@ export default function DashboardPage() {
     return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
   }
 
-  async function handleSearchVehicle(searchPlate = plate) {
-    const normalized = normalizePlate(searchPlate);
+  async function handleSearchVehicle(customPlate?: string) {
+    const normalized = normalizePlate(customPlate ?? plate);
 
     if (!normalized) {
       setSearchError("Digite uma placa para buscar.");
@@ -149,6 +151,64 @@ export default function DashboardPage() {
       setSearchError("Não foi possível buscar a placa agora.");
     } finally {
       setSearchingVehicle(false);
+    }
+  }
+
+  async function handleStartAttendance() {
+    if (!selectedVehicle?.cadastroExiste || !selectedVehicle?.placa) return;
+
+    try {
+      setStartingAttendance(true);
+
+      const normalized = normalizePlate(selectedVehicle.placa);
+
+      const { data: moto, error: motoError } = await supabase
+        .from("motos")
+        .select("id, cliente_id, placa")
+        .eq("placa", normalized)
+        .maybeSingle();
+
+      if (motoError) throw motoError;
+      if (!moto) {
+        toast.error("Moto não encontrada para iniciar atendimento.");
+        return;
+      }
+
+      const { data: visitaAberta, error: visitaAbertaError } = await supabase
+        .from("visitas")
+        .select("id, status")
+        .eq("moto_id", moto.id)
+        .in("status", ["aberta", "em_andamento"])
+        .order("data_entrada", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (visitaAbertaError) throw visitaAbertaError;
+
+      if (visitaAberta) {
+        toast("Já existe um atendimento em andamento para esta moto.");
+        await handleSearchVehicle(selectedVehicle.placa);
+        return;
+      }
+
+      const { error: visitaInsertError } = await supabase
+        .from("visitas")
+        .insert({
+          moto_id: moto.id,
+          cliente_id: moto.cliente_id ?? null,
+          status: "em_andamento",
+          data_entrada: new Date().toISOString(),
+        });
+
+      if (visitaInsertError) throw visitaInsertError;
+
+      await handleSearchVehicle(selectedVehicle.placa);
+      toast.success("Atendimento iniciado com sucesso.");
+    } catch (error) {
+      console.error("Erro ao iniciar atendimento:", error);
+      toast.error("Não foi possível iniciar o atendimento.");
+    } finally {
+      setStartingAttendance(false);
     }
   }
 
@@ -491,8 +551,10 @@ export default function DashboardPage() {
         }}
         onOpenHistory={() => {
           setVehicleModalOpen(false);
-          alert("Aqui vamos abrir o histórico da moto no próximo passo.");
+          toast("No próximo passo vamos abrir histórico/checklist.");
         }}
+        onStartAttendance={handleStartAttendance}
+        startingAttendance={startingAttendance}
       />
 
       {createVehicleModalOpen ? (
@@ -532,9 +594,10 @@ export default function DashboardPage() {
               setPlate(formData.placa);
 
               await handleSearchVehicle(formData.placa);
+              toast.success("Cadastro salvo com sucesso.");
             } catch (error) {
               console.error("Erro ao cadastrar veículo:", error);
-              alert("Não foi possível salvar o cadastro.");
+              toast.error("Não foi possível salvar o cadastro.");
             } finally {
               setCreatingVehicle(false);
             }

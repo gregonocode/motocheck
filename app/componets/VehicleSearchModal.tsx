@@ -24,6 +24,8 @@ type VehicleSearchModalProps = {
   vehicle: VehicleSearchData | null;
   onCreateNew?: () => void;
   onOpenHistory?: () => void;
+  onStartAttendance?: () => void;
+  startingAttendance?: boolean;
 };
 
 function getStatusStyles(status?: VehicleSearchData["status"]) {
@@ -56,6 +58,8 @@ export default function VehicleSearchModal({
   vehicle,
   onCreateNew,
   onOpenHistory,
+  onStartAttendance,
+  startingAttendance = false,
 }: VehicleSearchModalProps) {
   if (!open) return null;
 
@@ -146,10 +150,32 @@ export default function VehicleSearchModal({
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-3">
+                    {vehicle.status === "Sem atendimento" ||
+                    vehicle.status === "Finalizada" ? (
+                      <button
+                        type="button"
+                        onClick={onStartAttendance}
+                        disabled={startingAttendance}
+                        className="rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                      >
+                        {startingAttendance
+                          ? "Iniciando..."
+                          : "Iniciar atendimento"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={onOpenHistory}
+                        className="rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95"
+                      >
+                        Continuar atendimento
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={onOpenHistory}
-                      className="rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95"
+                      className="rounded-2xl border border-zinc-300 px-5 py-3 text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50"
                     >
                       Ver histórico
                     </button>
