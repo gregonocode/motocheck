@@ -3,23 +3,34 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import CreateVehicleModal from "@/app/components/CreateVehicleModal";
+import VehicleSearchModal, {
+  VehicleSearchData,
+} from "@/app/components/VehicleSearchModal";
+import { createClient } from "@/lib/supabase/client";
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineArrowRightOnRectangle,
   HiOutlineClock,
   HiOutlineCog,
 } from "react-icons/hi2";
-import {
-  FaCamera,
-  FaCheckCircle,
-  FaUserAlt,
-} from "react-icons/fa";
+import { FaCheckCircle } from "react-icons/fa";
 import { CgSearchFound } from "react-icons/cg";
 import { Settings, Zap } from "lucide-react";
 
 export default function DashboardPage() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
+  const supabase = createClient();
+
+  const [plate, setPlate] = useState("");
+  const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] =
+    useState<VehicleSearchData | null>(null);
+  const [searchingVehicle, setSearchingVehicle] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [createVehicleModalOpen, setCreateVehicleModalOpen] = useState(false);
+  const [creatingVehicle, setCreatingVehicle] = useState(false);
 
   const atendimentos = [
     {
@@ -45,7 +56,104 @@ export default function DashboardPage() {
     },
   ];
 
+  function normalizePlate(value: string) {
+    return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  }
+
+  async function handleSearchVehicle(searchPlate = plate) {
+    const normalized = normalizePlate(searchPlate);
+
+    if (!normalized) {
+      setSearchError("Digite uma placa para buscar.");
+      return;
+    }
+
+    setSearchError("");
+    setSearchingVehicle(true);
+
+    try {
+      const { data: moto, error: motoError } = await supabase
+        .from("motos")
+        .select("*")
+        .eq("placa", normalized)
+        .maybeSingle();
+
+      if (motoError) {
+        throw motoError;
+      }
+
+      if (!moto) {
+        setSelectedVehicle({
+          placa: normalized,
+          cadastroExiste: false,
+        });
+        setVehicleModalOpen(true);
+        return;
+      }
+
+      let clienteNome = "";
+      let clienteTelefone = "";
+
+      if (moto.cliente_id) {
+        const { data: cliente, error: clienteError } = await supabase
+          .from("clientes")
+          .select("nome, telefone")
+          .eq("id", moto.cliente_id)
+          .maybeSingle();
+
+        if (clienteError) {
+          throw clienteError;
+        }
+
+        clienteNome = cliente?.nome ?? "";
+        clienteTelefone = cliente?.telefone ?? "";
+      }
+
+      const { data: ultimaVisita, error: visitaError } = await supabase
+        .from("visitas")
+        .select("status, data_entrada")
+        .eq("moto_id", moto.id)
+        .order("data_entrada", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (visitaError) {
+        throw visitaError;
+      }
+
+      const statusMap: Record<string, VehicleSearchData["status"]> = {
+        aberta: "Em andamento",
+        em_andamento: "Em andamento",
+        finalizada: "Finalizada",
+        cancelada: "Aguardando",
+      };
+
+      setSelectedVehicle({
+        placa: moto.placa,
+        marca: moto.marca ?? "",
+        veiculo: moto.modelo ?? "",
+        cilindrada: moto.cilindrada ?? "",
+        ano: moto.ano ?? "",
+        cor: moto.cor ?? "",
+        cliente: clienteNome,
+        telefone: clienteTelefone,
+        status: ultimaVisita?.status
+          ? statusMap[ultimaVisita.status] ?? "Sem atendimento"
+          : "Sem atendimento",
+        cadastroExiste: true,
+      });
+
+      setVehicleModalOpen(true);
+    } catch (error) {
+      console.error("Erro ao buscar veículo:", error);
+      setSearchError("Não foi possível buscar a placa agora.");
+    } finally {
+      setSearchingVehicle(false);
+    }
+  }
+
   return (
+    <>
     <div className="p-4 sm:p-6 lg:p-8">
       {/* Topbar mobile */}
       <div className="mb-6 flex items-center justify-between xl:hidden">
@@ -144,16 +252,41 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              <div className="flex w-full max-w-xl items-center gap-3 rounded-2xl border border-zinc-300 bg-white px-4 py-4">
-                <HiOutlineMagnifyingGlass className="text-xl text-zinc-500" />
-                <input
-                  type="text"
-                  placeholder="Ex: QWE1A23"
-                  className="w-full bg-transparent text-sm font-semibold text-[#181818] outline-none placeholder:text-zinc-400"
-                />
-                <button className="rounded-xl bg-[#181818] px-4 py-2 text-sm font-extrabold text-white">
-                  Buscar
-                </button>
+              <div className="w-full max-w-xl">
+                <div className="flex w-full max-w-xl items-center gap-3 rounded-2xl border border-zinc-300 bg-white px-4 py-4">
+                  <HiOutlineMagnifyingGlass className="text-xl text-zinc-500" />
+
+                  <input
+                    type="text"
+                    value={plate}
+                    onChange={(e) => {
+                      setPlate(e.target.value.toUpperCase());
+                      if (searchError) setSearchError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSearchVehicle();
+                      }
+                    }}
+                    placeholder="Ex: QWE1A23"
+                    className="w-full bg-transparent text-sm font-semibold uppercase text-[#181818] outline-none placeholder:text-zinc-400"
+                  />
+
+                  <button
+                    onClick={() => handleSearchVehicle()}
+                    disabled={searchingVehicle}
+                    className="rounded-xl bg-[#181818] px-4 py-2 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {searchingVehicle ? "Buscando..." : "Buscar"}
+                  </button>
+                </div>
+
+                {searchError ? (
+                  <p className="mt-3 text-sm font-bold text-red-600">
+                    {searchError}
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -347,5 +480,67 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      );
-    }
+
+      <VehicleSearchModal
+        open={vehicleModalOpen}
+        onClose={() => setVehicleModalOpen(false)}
+        vehicle={selectedVehicle}
+        onCreateNew={() => {
+          setVehicleModalOpen(false);
+          setCreateVehicleModalOpen(true);
+        }}
+        onOpenHistory={() => {
+          setVehicleModalOpen(false);
+          alert("Aqui vamos abrir o histórico da moto no próximo passo.");
+        }}
+      />
+
+      {createVehicleModalOpen ? (
+        <CreateVehicleModal
+          open={createVehicleModalOpen}
+          onClose={() => setCreateVehicleModalOpen(false)}
+          initialPlate={selectedVehicle?.placa || plate}
+          loading={creatingVehicle}
+          onSubmit={async (formData) => {
+            try {
+              setCreatingVehicle(true);
+
+              const { data: cliente, error: clienteError } = await supabase
+                .from("clientes")
+                .insert({
+                  nome: formData.cliente,
+                  telefone: formData.telefone || null,
+                })
+                .select("id")
+                .single();
+
+              if (clienteError) throw clienteError;
+
+              const { error: motoError } = await supabase.from("motos").insert({
+                placa: formData.placa,
+                marca: formData.marca,
+                modelo: formData.modelo,
+                cilindrada: formData.cilindrada || null,
+                ano: formData.ano ? Number(formData.ano) : null,
+                cor: formData.cor || null,
+                cliente_id: cliente.id,
+              });
+
+              if (motoError) throw motoError;
+
+              setCreateVehicleModalOpen(false);
+              setPlate(formData.placa);
+
+              await handleSearchVehicle(formData.placa);
+            } catch (error) {
+              console.error("Erro ao cadastrar veículo:", error);
+              alert("Não foi possível salvar o cadastro.");
+            } finally {
+              setCreatingVehicle(false);
+            }
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
