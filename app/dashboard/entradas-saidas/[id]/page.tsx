@@ -81,6 +81,17 @@ const valueLabels: Record<string, string> = {
   foto_depois: "Adicionar depois",
 };
 
+const requiredChecklistItemIds = [
+  "a1111111-1111-1111-1111-111111111111", // combustível
+  "b1111111-1111-1111-1111-111111111111", // pisca esquerdo
+  "b2222222-2222-2222-2222-222222222222", // pisca direito
+  "b3333333-3333-3333-3333-333333333333", // farol
+  "b4444444-4444-4444-4444-444444444444", // buzina
+  "c2222222-2222-2222-2222-222222222222", // caximbo de vela
+  "f1111111-1111-1111-1111-111111111111", // observações
+  "f2222222-2222-2222-2222-222222222222", // foto ou adicionar depois
+];
+
 function formatStatus(status?: string | null) {
   if (status === "aberta" || status === "em_andamento") return "Em andamento";
   if (status === "aguardando") return "Aguardando";
@@ -149,6 +160,8 @@ export default function EntradaSaidaDetalhePage() {
   const [cliente, setCliente] = useState<ClienteData | null>(null);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [showPdfBlockedModal, setShowPdfBlockedModal] = useState(false);
 
   async function loadData() {
     try {
@@ -249,8 +262,35 @@ export default function EntradaSaidaDetalhePage() {
     }
   }
 
-  function handlePdfPlaceholder() {
-    alert("Na próxima etapa vamos gerar o PDF do checklist para imprimir ou assinar.");
+  async function handleGerarPdf() {
+    if (!visita) return;
+
+    const statusEmAndamento =
+      visita.status === "aberta" || visita.status === "em_andamento";
+
+    const checklistCompleto = requiredChecklistItemIds.every((itemId) =>
+      checklist.some((item) => {
+        const value = item.valor_texto || item.status;
+        return item.item_modelo_id === itemId && !!value;
+      })
+    );
+
+    if (statusEmAndamento || !checklistCompleto) {
+      setShowPdfBlockedModal(true);
+      return;
+    }
+
+    try {
+      setGeneratingPdf(true);
+
+      // Próximo passo: vamos criar esse endpoint.
+      window.open(`/api/visitas/${visita.id}/pdf`, "_blank");
+    } catch (error) {
+      console.error("Erro ao abrir PDF:", error);
+      alert("Não foi possível abrir o PDF.");
+    } finally {
+      setGeneratingPdf(false);
+    }
   }
 
   if (loading) {
@@ -286,6 +326,18 @@ export default function EntradaSaidaDetalhePage() {
 
   const canFinalize =
     visita.status !== "finalizada" && visita.status !== "cancelada";
+
+  const statusEmAndamento =
+    visita.status === "aberta" || visita.status === "em_andamento";
+
+  const checklistCompleto = requiredChecklistItemIds.every((itemId) =>
+    checklist.some((item) => {
+      const value = item.valor_texto || item.status;
+      return item.item_modelo_id === itemId && !!value;
+    })
+  );
+
+  const podeGerarPdf = !statusEmAndamento && checklistCompleto;
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
@@ -338,11 +390,16 @@ export default function EntradaSaidaDetalhePage() {
 
           <button
             type="button"
-            onClick={handlePdfPlaceholder}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-yellow-200 px-5 py-4 text-sm font-black text-[#181818] transition hover:opacity-95"
+            onClick={handleGerarPdf}
+            disabled={generatingPdf}
+            className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              podeGerarPdf
+                ? "bg-yellow-200 text-[#181818] hover:opacity-95"
+                : "bg-zinc-200 text-zinc-500"
+            }`}
           >
             <HiOutlineDocumentText size={19} />
-            Gerar PDF
+            {generatingPdf ? "Gerando..." : "Gerar PDF"}
           </button>
         </div>
       </div>
@@ -475,19 +532,38 @@ export default function EntradaSaidaDetalhePage() {
               PDF e assinatura
             </h2>
             <p className="mt-2 max-w-3xl text-sm font-medium leading-relaxed text-zinc-500">
-              Essa área já está preparada para conectar com o gerador de PDF.
-              Depois vamos incluir o botão para baixar, imprimir ou abrir a
-              assinatura digital do cliente.
+              O PDF será gerado como um Termo de Recebimento e Condições do Veículo,
+              contendo os dados da moto, cliente, respostas do checklist, foto da entrada
+              quando existir e espaço para assinatura do cliente.
             </p>
+
+            <div className="mt-4 rounded-2xl bg-zinc-50 p-4">
+              <p className="text-sm font-black text-[#181818]">
+                Status para PDF:
+              </p>
+
+              <p className="mt-1 text-sm font-semibold text-zinc-500">
+                {podeGerarPdf
+                  ? "Pronto para gerar PDF."
+                  : statusEmAndamento
+                  ? "Finalize o checklist antes de gerar o PDF."
+                  : "Checklist incompleto. Responda todos os itens antes de gerar o PDF."}
+              </p>
+            </div>
           </div>
 
           <button
             type="button"
-            onClick={handlePdfPlaceholder}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 px-5 py-4 text-sm font-black text-[#181818] transition hover:bg-zinc-50"
+            onClick={handleGerarPdf}
+            disabled={generatingPdf}
+            className={`inline-flex items-center justify-center gap-2 rounded-2xl border px-5 py-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              podeGerarPdf
+                ? "border-zinc-300 text-[#181818] hover:bg-zinc-50"
+                : "border-zinc-200 bg-zinc-100 text-zinc-500"
+            }`}
           >
             <HiOutlinePrinter size={19} />
-            Preparar PDF
+            {generatingPdf ? "Gerando..." : "Preparar PDF"}
           </button>
         </div>
       </div>
@@ -536,6 +612,60 @@ export default function EntradaSaidaDetalhePage() {
                 className="rounded-2xl bg-[#181818] px-4 py-3 text-sm font-black text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {finalizing ? "Finalizando..." : "Sim, finalizar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showPdfBlockedModal ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-[28px] bg-white p-5 shadow-2xl">
+            <div className="mb-4">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-zinc-500">
+                PDF indisponível
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-[#181818]">
+                Ainda não é possível gerar o PDF
+              </h2>
+
+              <p className="mt-3 text-sm font-semibold leading-relaxed text-zinc-500">
+                O termo só pode ser gerado depois que o checklist de entrada estiver
+                completo e o atendimento não estiver mais em andamento.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-zinc-50 p-4">
+              <p className="text-sm font-black text-[#181818]">
+                Situação atual:
+              </p>
+
+              <p className="mt-1 text-sm font-semibold text-zinc-500">
+                Status: {formatStatus(visita.status)}
+              </p>
+
+              <p className="mt-1 text-sm font-semibold text-zinc-500">
+                Checklist: {checklistCompleto ? "Completo" : "Incompleto"}
+              </p>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3">
+              {!checklistCompleto ? (
+                <Link
+                  href={`/dashboard/atendimentos/${visita.id}/quiz`}
+                  className="rounded-2xl bg-yellow-200 px-4 py-3 text-center text-sm font-black text-[#181818] transition hover:opacity-90"
+                >
+                  Continuar checklist
+                </Link>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => setShowPdfBlockedModal(false)}
+                className="rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-black text-[#181818] transition hover:bg-zinc-50"
+              >
+                Entendi
               </button>
             </div>
           </div>
