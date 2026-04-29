@@ -6,7 +6,38 @@ import { HiOutlineClipboardDocumentList } from "react-icons/hi2";
 import { FaCamera, FaUserAlt } from "react-icons/fa";
 import { CgSearchFound } from "react-icons/cg";
 
-function NavItem({
+const navItems = [
+  {
+    href: "/dashboard",
+    icon: <CgSearchFound size={21} />,
+    label: "Início",
+    desktopLabel: "Dashboard",
+  },
+  {
+    href: "/dashboard/atendimentos",
+    icon: <HiOutlineClipboardDocumentList size={22} />,
+    label: "Atend.",
+    desktopLabel: "Atendimentos",
+  },
+  {
+    href: "/dashboard/entradas-saidas",
+    icon: <FaCamera size={18} />,
+    label: "Entrada",
+    desktopLabel: "Entradas e saídas",
+  },
+  {
+    href: "/dashboard/clientes",
+    icon: <FaUserAlt size={17} />,
+    label: "Clientes",
+    desktopLabel: "Clientes",
+  },
+];
+
+function isActivePath(pathname: string, href: string) {
+  return pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+}
+
+function SidebarNavItem({
   href,
   icon,
   label,
@@ -16,8 +47,7 @@ function NavItem({
   label: string;
 }) {
   const pathname = usePathname();
-  const active =
-    pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+  const active = isActivePath(pathname, href);
 
   return (
     <Link
@@ -28,8 +58,35 @@ function NavItem({
           : "font-bold text-zinc-600 hover:bg-zinc-100"
       }`}
     >
-      {icon}
+      <span className="flex h-6 w-6 items-center justify-center">{icon}</span>
       {label}
+    </Link>
+  );
+}
+
+function BottomNavItem({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  const pathname = usePathname();
+  const active = isActivePath(pathname, href);
+
+  return (
+    <Link
+      href={href}
+      className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-black transition ${
+        active
+          ? "bg-[#181818] text-yellow-200 shadow-sm"
+          : "text-zinc-500 hover:bg-zinc-100"
+      }`}
+    >
+      <span className="flex h-6 items-center justify-center">{icon}</span>
+      <span className="max-w-full truncate">{label}</span>
     </Link>
   );
 }
@@ -48,6 +105,7 @@ export default function DashboardLayout({
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#181818] text-yellow-200">
                 <CgSearchFound size={24} />
               </div>
+
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-[0.25em] text-zinc-500">
                   Sistema
@@ -59,35 +117,33 @@ export default function DashboardLayout({
 
           <nav className="flex-1 p-4">
             <div className="space-y-2">
-              <NavItem
-                href="/dashboard"
-                icon={<CgSearchFound />}
-                label="Dashboard"
-              />
-
-              <NavItem
-                href="/dashboard/atendimentos"
-                icon={<HiOutlineClipboardDocumentList size={20} />}
-                label="Atendimentos"
-              />
-
-              <NavItem
-                href="/dashboard/entradas-saidas"
-                icon={<FaCamera />}
-                label="Entradas e saídas"
-              />
-
-              <NavItem
-                href="/dashboard/clientes"
-                icon={<FaUserAlt />}
-                label="Clientes"
-              />
+              {navItems.map((item) => (
+                <SidebarNavItem
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  label={item.desktopLabel}
+                />
+              ))}
             </div>
           </nav>
         </aside>
 
-        <section className="flex-1">{children}</section>
+        <section className="min-w-0 flex-1 pb-24 xl:pb-0">{children}</section>
       </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200 bg-white/95 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-12px_35px_rgba(0,0,0,0.08)] backdrop-blur-xl xl:hidden">
+        <div className="mx-auto flex max-w-md items-center gap-2">
+          {navItems.map((item) => (
+            <BottomNavItem
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              label={item.label}
+            />
+          ))}
+        </div>
+      </nav>
     </main>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { IoCloseCircleOutline } from "react-icons/io5";
 import { MdDirectionsCar, MdOutlineBadge } from "react-icons/md";
 import { FaUserCircle } from "react-icons/fa";
@@ -14,7 +15,8 @@ export type VehicleSearchData = {
   cor?: string;
   cliente?: string;
   telefone?: string;
-  status?: "Em andamento" | "Finalizada" | "Aguardando" | "Sem atendimento";
+  visitaId?: string;
+  status?: "Em andamento" | "Aguardando" | "Finalizada" | "Cancelada" | "Sem atendimento";
   cadastroExiste: boolean;
 };
 
@@ -35,7 +37,9 @@ function getStatusStyles(status?: VehicleSearchData["status"]) {
     case "Em andamento":
       return "border-yellow-200 bg-yellow-100 text-yellow-700";
     case "Aguardando":
-      return "border-zinc-200 bg-zinc-100 text-zinc-700";
+      return "border-blue-200 bg-blue-100 text-blue-700";
+    case "Cancelada":
+      return "border-red-200 bg-red-50 text-red-600";
     default:
       return "border-red-200 bg-red-50 text-red-600";
   }
@@ -162,6 +166,13 @@ export default function VehicleSearchModal({
                           ? "Iniciando..."
                           : "Iniciar atendimento"}
                       </button>
+                    ) : vehicle.visitaId ? (
+                      <Link
+                        href={`/dashboard/atendimentos/${vehicle.visitaId}/quiz`}
+                        className="rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95"
+                      >
+                        Continuar atendimento
+                      </Link>
                     ) : (
                       <button
                         type="button"

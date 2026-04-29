@@ -17,7 +17,7 @@ type AtendimentoItem = {
   placa: string;
   cliente: string;
   moto: string;
-  status: "Em andamento" | "Finalizada" | "Aguardando";
+  status: "Em andamento" | "Aguardando" | "Finalizada" | "Cancelada" | "Sem atendimento";
   entrada: string;
   saida?: string | null;
 };
@@ -28,6 +28,10 @@ function getStatusClasses(status: AtendimentoItem["status"]) {
       return "bg-green-100 text-green-700";
     case "Em andamento":
       return "bg-yellow-100 text-yellow-700";
+    case "Aguardando":
+      return "bg-blue-100 text-blue-700";
+    case "Cancelada":
+      return "bg-red-100 text-red-700";
     default:
       return "bg-zinc-100 text-zinc-700";
   }
@@ -41,10 +45,12 @@ export default function AtendimentosPage() {
   const [atendimentos, setAtendimentos] = useState<AtendimentoItem[]>([]);
   const [loadingAtendimentos, setLoadingAtendimentos] = useState(true);
 
-  function formatStatus(status?: string): AtendimentoItem["status"] {
+  function formatStatus(status?: string | null): AtendimentoItem["status"] {
     if (status === "aberta" || status === "em_andamento") return "Em andamento";
+    if (status === "aguardando") return "Aguardando";
     if (status === "finalizada") return "Finalizada";
-    return "Aguardando";
+    if (status === "cancelada") return "Cancelada";
+    return "Sem atendimento";
   }
 
   async function loadAtendimentos() {

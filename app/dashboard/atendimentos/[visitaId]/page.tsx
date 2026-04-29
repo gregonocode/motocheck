@@ -1,14 +1,23 @@
+//app\dashboard\atendimentos\[visitaId]\page.tsx
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+} from "react";
+import { useParams, useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import { createClient } from "@/lib/supabase/client";
 import {
   HiOutlineArrowLeft,
   HiOutlineArrowRight,
   HiOutlineCamera,
   HiOutlineCheckCircle,
+  HiOutlineTrash,
 } from "react-icons/hi2";
 import { FaMotorcycle, FaGasPump } from "react-icons/fa";
 import { PiEngineFill } from "react-icons/pi";
@@ -42,10 +51,30 @@ type ChecklistRow = {
   valor_texto: string | null;
 };
 
+type CanvasPoint = {
+  x: number;
+  y: number;
+};
+
+const PHOTO_QUESTION_ID = "f2222222-2222-2222-2222-222222222222";
+
+const brushColors = [
+  { label: "Vermelho", value: "#ef4444" },
+  { label: "Amarelo", value: "#facc15" },
+  { label: "Verde", value: "#22c55e" },
+  { label: "Azul", value: "#3b82f6" },
+  { label: "Preto", value: "#181818" },
+];
+
 export default function AtendimentoDetalhePage() {
   const params = useParams();
+  const router = useRouter();
   const visitaId = params?.visitaId as string;
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const lastPointRef = useRef<CanvasPoint | null>(null);
 
   const questions = useMemo<QuestionItem[]>(
     () => [
@@ -143,7 +172,7 @@ export default function AtendimentoDetalhePage() {
         categoriaId: "77777777-7777-7777-7777-777777777777",
         title: "Foto da entrada",
         description:
-          "Marque se a foto da entrada já foi feita. No próximo passo vamos ligar isso com upload real.",
+          "Use a câmera do celular, marque pontos importantes na imagem e salve a foto do atendimento.",
         type: "options",
         icon: <HiOutlineCamera size={22} />,
         options: [
@@ -160,15 +189,20 @@ export default function AtendimentoDetalhePage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [loadingPage, setLoadingPage] = useState(true);
   const [savingPartial, setSavingPartial] = useState(false);
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+  const [brushColor, setBrushColor] = useState("#ef4444");
+  const [isDrawing, setIsDrawing] = useState(false);
 
   const totalSteps = questions.length;
   const currentQuestion = questions[currentStep];
+  const isPhotoStep = currentQuestion?.id === PHOTO_QUESTION_ID;
   const progress = Math.round(((currentStep + 1) / totalSteps) * 100);
 
-  function formatStatus(status?: string) {
+  function formatStatus(status?: string | null) {
     if (status === "aberta" || status === "em_andamento") return "Em andamento";
+    if (status === "aguardando") return "Aguardando";
     if (status === "finalizada") return "Finalizada";
-    if (status === "cancelada") return "Aguardando";
+    if (status === "cancelada") return "Cancelada";
     return "Sem atendimento";
   }
 
@@ -180,8 +214,201 @@ export default function AtendimentoDetalhePage() {
   }
 
   function canGoNext() {
+    if (isPhotoStep) {
+      return (
+        photoDataUrl !== null || answers[currentQuestion.id] === "foto_depois"
+      );
+    }
+
     const value = answers[currentQuestion.id];
     return typeof value === "string" && value.trim().length > 0;
+  }
+
+  useEffect(() => {
+    if (photoDataUrl) {
+      drawImageOnCanvas(photoDataUrl);
+    }
+  }, [photoDataUrl]);
+
+  function drawImageOnCanvas(dataUrl: string) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const image = new window.Image();
+
+    image.onload = () => {
+      const maxWidth = 1200;
+      const ratio =
+        image.naturalWidth > maxWidth ? maxWidth / image.naturalWidth : 1;
+
+      canvas.width = Math.round(image.naturalWidth * ratio);
+      canvas.height = Math.round(image.naturalHeight * ratio);
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    };
+
+    image.src = dataUrl;
+  }
+
+  function getCanvasPoint(event: PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+
+    return {
+      x: (event.clientX - rect.left) * (canvas.width / rect.width),
+      y: (event.clientY - rect.top) * (canvas.height / rect.height),
+    };
+  }
+
+  function drawLine(from: CanvasPoint, to: CanvasPoint) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.strokeStyle = brushColor;
+    ctx.lineWidth = 9;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLCanvasElement>) {
+    if (!photoDataUrl) return;
+
+    event.preventDefault();
+
+    const canvas = canvasRef.current;
+    const point = getCanvasPoint(event);
+
+    if (!canvas || !point) return;
+
+    canvas.setPointerCapture(event.pointerId);
+    lastPointRef.current = point;
+    setIsDrawing(true);
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLCanvasElement>) {
+    if (!isDrawing || !photoDataUrl) return;
+
+    event.preventDefault();
+
+    const point = getCanvasPoint(event);
+    const lastPoint = lastPointRef.current;
+
+    if (!point || !lastPoint) return;
+
+    drawLine(lastPoint, point);
+    lastPointRef.current = point;
+  }
+
+  function handlePointerUp(event: PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+
+    if (canvas && canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
+
+    lastPointRef.current = null;
+    setIsDrawing(false);
+  }
+
+  function handlePhotoFile(file?: File | null) {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem válida.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = reader.result;
+
+      if (typeof result === "string") {
+        setPhotoDataUrl(result);
+        setAnswer(PHOTO_QUESTION_ID, "foto_ok");
+      }
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  function clearDrawings() {
+    if (!photoDataUrl) return;
+    drawImageOnCanvas(photoDataUrl);
+  }
+
+  function canvasToBlob() {
+    return new Promise<Blob>((resolve, reject) => {
+      const canvas = canvasRef.current;
+
+      if (!canvas) {
+        reject(new Error("Canvas não encontrado."));
+        return;
+      }
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Não foi possível gerar a imagem."));
+            return;
+          }
+
+          resolve(blob);
+        },
+        "image/jpeg",
+        0.88
+      );
+    });
+  }
+
+  async function uploadPhotoAndGetUrl() {
+    const blob = await canvasToBlob();
+    const path = `visitas/${visitaId}/entrada-${Date.now()}.jpg`;
+
+    const { data, error } = await supabase.storage
+      .from("fotos")
+      .upload(path, blob, {
+        contentType: "image/jpeg",
+        upsert: true,
+      });
+
+    if (error) throw error;
+
+    const { data: publicUrlData } = supabase.storage
+      .from("fotos")
+      .getPublicUrl(data.path);
+
+    return publicUrlData.publicUrl;
+  }
+
+  async function savePhotoIfNeeded() {
+    if (!photoDataUrl) return;
+
+    const photoUrl = await uploadPhotoAndGetUrl();
+
+    const { error } = await supabase
+      .from("visitas")
+      .update({
+        foto_entrada_url: photoUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", visitaId);
+
+    if (error) throw error;
   }
 
   async function loadVisitaData() {
@@ -270,6 +497,10 @@ export default function AtendimentoDetalhePage() {
     try {
       setSavingPartial(true);
 
+      if (isPhotoStep) {
+        await savePhotoIfNeeded();
+      }
+
       const payload = questions
         .filter((question) => {
           const value = answers[question.id];
@@ -278,6 +509,7 @@ export default function AtendimentoDetalhePage() {
         .map((question, index) => {
           const value = answers[question.id];
           const isTextarea = question.type === "textarea";
+          const allowedStatus = ["ok", "atencao", "nao_funciona", "trocar"];
 
           return {
             visita_id: visitaId,
@@ -285,8 +517,8 @@ export default function AtendimentoDetalhePage() {
             item_modelo_id: question.id,
             tipo_checklist: "entrada",
             ordem: index + 1,
-            status: isTextarea ? "ok" : value,
-            valor_texto: isTextarea ? value : null,
+            status: allowedStatus.includes(value) ? value : "ok",
+            valor_texto: value,
             observacao: isTextarea ? value : null,
           };
         });
@@ -307,7 +539,7 @@ export default function AtendimentoDetalhePage() {
         if (insertError) throw insertError;
       }
 
-      alert("Checklist salvo com sucesso.");
+      router.push("/dashboard/entradas-saidas");
     } catch (error) {
       console.error("Erro ao salvar checklist:", error);
       alert("Não foi possível salvar o checklist.");
@@ -371,10 +603,7 @@ export default function AtendimentoDetalhePage() {
             </Link>
           </div>
 
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-500">
-            Atendimento #{atendimento.id}
-          </p>
-          <h1 className="mt-1 text-3xl font-black leading-tight sm:text-4xl">
+          <h1 className="text-3xl font-black leading-tight sm:text-4xl">
             Checklist de entrada da moto
           </h1>
           <p className="mt-3 max-w-3xl text-sm font-medium text-zinc-600 sm:text-base">
@@ -512,7 +741,121 @@ export default function AtendimentoDetalhePage() {
             </p>
           ) : null}
 
-          {currentQuestion.type === "options" ? (
+          {isPhotoStep ? (
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(event) => handlePhotoFile(event.target.files?.[0])}
+              />
+
+              {!photoDataUrl ? (
+                <button
+                  type="button"
+                  disabled={savingPartial}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex min-h-[260px] w-full flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-zinc-300 bg-[#fafafa] px-5 py-8 text-center transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#181818] text-yellow-200">
+                    <HiOutlineCamera size={30} />
+                  </div>
+
+                  <p className="text-xl font-black text-[#181818]">
+                    Tirar foto
+                  </p>
+
+                  <p className="mt-2 max-w-md text-sm font-semibold text-zinc-500">
+                    Toque para abrir a câmera do celular e fotografar a moto na
+                    entrada.
+                  </p>
+                </button>
+              ) : (
+                <div>
+                  <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-100">
+                    <canvas
+                      ref={canvasRef}
+                      onPointerDown={handlePointerDown}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={handlePointerUp}
+                      className="block w-full touch-none"
+                    />
+                  </div>
+
+                  <div className="mt-4 rounded-[24px] border border-zinc-200 bg-[#fafafa] p-4">
+                    <p className="mb-3 text-sm font-black text-[#181818]">
+                      Cor da marcação
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {brushColors.map((color) => {
+                        const active = brushColor === color.value;
+
+                        return (
+                          <button
+                            key={color.value}
+                            type="button"
+                            onClick={() => setBrushColor(color.value)}
+                            className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-black transition ${
+                              active
+                                ? "border-[#181818] bg-white text-[#181818]"
+                                : "border-zinc-200 bg-white text-zinc-500"
+                            }`}
+                          >
+                            <span
+                              className="h-5 w-5 rounded-full border border-black/10"
+                              style={{ backgroundColor: color.value }}
+                            />
+                            {color.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={savingPartial}
+                        className="rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-black text-[#181818] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Trocar foto
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={clearDrawings}
+                        disabled={savingPartial}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 px-4 py-3 text-sm font-black text-[#181818] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <HiOutlineTrash size={17} />
+                        Limpar riscos
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={savingPartial}
+                onClick={() => {
+                  setPhotoDataUrl(null);
+                  setAnswer(currentQuestion.id, "foto_depois");
+                }}
+                className={`mt-4 w-full rounded-[22px] border px-5 py-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  answers[currentQuestion.id] === "foto_depois"
+                    ? "border-[#181818] bg-[#181818] text-white"
+                    : "border-zinc-300 text-[#181818] hover:bg-zinc-50"
+                }`}
+              >
+                Adicionar foto depois
+              </button>
+            </div>
+          ) : currentQuestion.type === "options" ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {currentQuestion.options?.map((option) => {
                 const selected = answers[currentQuestion.id] === option.value;
@@ -578,7 +921,11 @@ export default function AtendimentoDetalhePage() {
                 disabled={!canGoNext() || savingPartial}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {currentStep === totalSteps - 1 ? "Concluir etapa" : "Próxima"}
+                {isPhotoStep && photoDataUrl
+                  ? "Salvar foto e concluir"
+                  : currentStep === totalSteps - 1
+                  ? "Concluir etapa"
+                  : "Próxima"}
                 <HiOutlineArrowRight size={18} />
               </button>
             </div>
