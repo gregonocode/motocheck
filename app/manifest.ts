@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "MotoCheck",
     description:
       "Sistema da Nenem Autopeças para atendimento e controle da oficina.",
-    start_url: "/login",
+    start_url: "/dashboard",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

@@ -35,6 +35,7 @@ export default function CreateVehicleModal({
   onSubmit,
   loading = false,
 }: CreateVehicleModalProps) {
+  const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const [form, setForm] = useState<CreateVehicleFormData>({
     placa: normalizePlate(initialPlate),
     marca: "",
@@ -56,8 +57,15 @@ export default function CreateVehicleModal({
     }));
   }
 
+  const vehicleStepComplete =
+    normalizePlate(form.placa).length > 0 &&
+    form.marca.trim().length > 0 &&
+    form.modelo.trim().length > 0;
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!vehicleStepComplete || form.cliente.trim().length === 0) return;
+
     await onSubmit({
       ...form,
       placa: normalizePlate(form.placa),
@@ -74,10 +82,10 @@ export default function CreateVehicleModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4">
-      <div className="w-full max-w-4xl overflow-hidden rounded-[22px] bg-[#efefef] shadow-[0_25px_80px_rgba(0,0,0,0.22)]">
-        <div className="flex items-center justify-between bg-[#4b4b4b] px-5 py-4 text-white">
-          <h2 className="text-lg font-extrabold sm:text-[22px]">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-3 sm:p-4">
+      <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-4xl flex-col overflow-hidden rounded-[22px] bg-[#efefef] shadow-[0_25px_80px_rgba(0,0,0,0.22)] sm:max-h-[calc(100dvh-32px)]">
+        <div className="flex items-center justify-between gap-3 bg-[#4b4b4b] px-4 py-3 text-white sm:px-5 sm:py-4">
+          <h2 className="text-base font-extrabold sm:text-[22px]">
             Cadastrar novo veículo
           </h2>
 
@@ -91,10 +99,39 @@ export default function CreateVehicleModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5">
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-3 sm:p-5">
           <div className="rounded-2xl border border-zinc-300 bg-[#f8f8f8] p-4 sm:p-6">
+            <div className="mb-4 grid grid-cols-2 gap-2 md:hidden">
+              <button
+                type="button"
+                onClick={() => setActiveStep(1)}
+                className={`rounded-2xl border px-3 py-2 text-xs font-extrabold transition ${
+                  activeStep === 1
+                    ? "border-[#181818] bg-[#181818] text-white"
+                    : "border-zinc-300 bg-white text-[#181818]"
+                }`}
+              >
+                1. Moto
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (vehicleStepComplete) setActiveStep(2);
+                }}
+                disabled={!vehicleStepComplete}
+                className={`rounded-2xl border px-3 py-2 text-xs font-extrabold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                  activeStep === 2
+                    ? "border-[#181818] bg-[#181818] text-white"
+                    : "border-zinc-300 bg-white text-[#181818]"
+                }`}
+              >
+                2. Cliente
+              </button>
+            </div>
+
             <div className="grid gap-6 lg:grid-cols-2">
-              <div>
+              <div className={activeStep === 1 ? "block" : "hidden md:block"}>
                 <div className="mb-4 flex items-center gap-2 text-[#181818]">
                   <PiMotorcycleFill size={18} />
                   <span className="text-[15px] font-black">
@@ -191,7 +228,7 @@ export default function CreateVehicleModal({
                 </div>
               </div>
 
-              <div>
+              <div className={activeStep === 2 ? "block" : "hidden md:block"}>
                 <div className="mb-4 flex items-center gap-2 text-[#181818]">
                   <FaUserCircle size={18} />
                   <span className="text-[15px] font-black">
@@ -240,11 +277,34 @@ export default function CreateVehicleModal({
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              {activeStep === 2 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveStep(1)}
+                  className="order-2 rounded-2xl border border-zinc-300 px-5 py-3 text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50 sm:order-none md:hidden"
+                >
+                  Voltar
+                </button>
+              )}
+
+              {activeStep === 1 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveStep(2)}
+                  disabled={!vehicleStepComplete}
+                  className="order-1 rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70 sm:order-none md:hidden"
+                >
+                  Continuar
+                </button>
+              )}
+
               <button
                 type="submit"
                 disabled={loading}
-                className="rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                className={`order-1 rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70 sm:order-none ${
+                  activeStep === 1 ? "hidden md:inline-flex" : ""
+                }`}
               >
                 {loading ? "Salvando..." : "Salvar cadastro"}
               </button>
@@ -252,7 +312,7 @@ export default function CreateVehicleModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-2xl border border-zinc-300 px-5 py-3 text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50"
+                className="order-3 rounded-2xl border border-zinc-300 px-5 py-3 text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50 sm:order-none"
               >
                 Cancelar
               </button>

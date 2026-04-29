@@ -66,6 +66,7 @@ export default function ChecklistQuiz({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const lastPointRef = useRef<CanvasPoint | null>(null);
+  const advanceTimeoutRef = useRef<number | null>(null);
 
   const [atendimento, setAtendimento] = useState<AtendimentoData | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -184,6 +185,14 @@ export default function ChecklistQuiz({
       drawImageOnCanvas(photoDataUrl);
     }
   }, [photoDataUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (advanceTimeoutRef.current) {
+        window.clearTimeout(advanceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   function drawImageOnCanvas(dataUrl: string) {
     const canvas = canvasRef.current;
@@ -431,8 +440,13 @@ export default function ChecklistQuiz({
       return;
     }
 
-    window.setTimeout(() => {
+    if (advanceTimeoutRef.current) {
+      window.clearTimeout(advanceTimeoutRef.current);
+    }
+
+    advanceTimeoutRef.current = window.setTimeout(() => {
       setCurrentStep((prev) => prev + 1);
+      advanceTimeoutRef.current = null;
     }, 180);
   }
 
@@ -517,11 +531,27 @@ export default function ChecklistQuiz({
 
   function handleBack() {
     if (currentStep > 0) {
+      if (advanceTimeoutRef.current) {
+        window.clearTimeout(advanceTimeoutRef.current);
+        advanceTimeoutRef.current = null;
+      }
+
       setCurrentStep((prev) => prev - 1);
       return;
     }
 
     router.push(`/dashboard/atendimentos/${visitaId}`);
+  }
+
+  function handlePreviousQuestion() {
+    if (currentStep === 0 || saving) return;
+
+    if (advanceTimeoutRef.current) {
+      window.clearTimeout(advanceTimeoutRef.current);
+      advanceTimeoutRef.current = null;
+    }
+
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
   }
 
   if (loadingPage) {
@@ -558,9 +588,9 @@ export default function ChecklistQuiz({
   const selectedValue = answers[currentQuestion.id];
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] px-4 py-5">
-      <div className="mx-auto flex min-h-[calc(100vh-2.5rem)] max-w-xl flex-col">
-        <div className="mb-5 flex items-center justify-between gap-3">
+    <div className="min-h-screen bg-[#F7F8FA] px-3 py-4 sm:px-4 sm:py-5">
+      <div className="mx-auto flex min-h-[calc(100dvh-2rem)] max-w-xl flex-col sm:min-h-[calc(100vh-2.5rem)]">
+        <div className="mb-4 flex items-center justify-between gap-3 sm:mb-5">
           <button
             type="button"
             onClick={handleBack}
@@ -576,12 +606,12 @@ export default function ChecklistQuiz({
           <div className="h-11 w-11" />
         </div>
 
-        <div className="mb-5 rounded-[30px] bg-[#181818] p-5 text-white shadow-sm">
+        <div className="mb-4 rounded-[26px] bg-[#181818] p-4 text-white shadow-sm sm:mb-5 sm:rounded-[30px] sm:p-5">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-yellow-200">
             Quiz Moto Check
           </p>
 
-          <h1 className="mt-2 text-2xl font-black leading-tight">
+          <h1 className="mt-2 text-[22px] font-black leading-tight sm:text-2xl">
             {atendimento.placa}
           </h1>
 
@@ -606,13 +636,13 @@ export default function ChecklistQuiz({
           </div>
         </div>
 
-        <main className="flex flex-1 flex-col rounded-[34px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="mb-6">
+        <main className="flex flex-1 flex-col rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-[34px] sm:p-5">
+          <div className="mb-5 sm:mb-6">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
               Pergunta atual
             </p>
 
-            <h2 className="mt-3 text-3xl font-black leading-tight text-[#181818]">
+            <h2 className="mt-3 text-2xl font-black leading-tight text-[#181818] sm:text-3xl">
               {isPhotoStep ? "Tire uma foto da moto" : currentQuestion.title}
             </h2>
 
@@ -641,13 +671,13 @@ export default function ChecklistQuiz({
                   type="button"
                   disabled={saving}
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex min-h-[220px] flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-zinc-300 bg-[#FAFAFA] px-5 py-8 text-center transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex min-h-[190px] flex-col items-center justify-center rounded-[26px] border-2 border-dashed border-zinc-300 bg-[#FAFAFA] px-5 py-7 text-center transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[220px] sm:rounded-[28px] sm:py-8"
                 >
                   <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#181818] text-yellow-200">
                     <HiOutlineCamera size={30} />
                   </div>
 
-                  <p className="text-xl font-black text-[#181818]">
+                  <p className="text-lg font-black text-[#181818] sm:text-xl">
                     Tirar foto
                   </p>
 
@@ -669,7 +699,7 @@ export default function ChecklistQuiz({
                     />
                   </div>
 
-                  <div className="mt-4 rounded-[24px] border border-zinc-200 bg-[#FAFAFA] p-4">
+                  <div className="mt-4 rounded-[22px] border border-zinc-200 bg-[#FAFAFA] p-3 sm:rounded-[24px] sm:p-4">
                     <p className="mb-3 text-sm font-black text-[#181818]">
                       Cor da marcação
                     </p>
@@ -699,7 +729,7 @@ export default function ChecklistQuiz({
                       })}
                     </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="mt-4 grid gap-2 min-[420px]:grid-cols-2">
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
@@ -754,14 +784,14 @@ export default function ChecklistQuiz({
                     type="button"
                     disabled={saving}
                     onClick={() => handleOptionAnswer(option.value)}
-                    className={`flex w-full items-center justify-between rounded-[24px] border px-5 py-5 text-left transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 ${
+                    className={`flex w-full items-center justify-between gap-3 rounded-[22px] border px-4 py-4 text-left transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-[24px] sm:px-5 sm:py-5 ${
                       selected
                         ? "border-[#181818] bg-[#181818] text-white"
                         : "border-zinc-200 bg-[#FAFAFA] text-[#181818] hover:border-zinc-300"
                     }`}
                   >
                     <div>
-                      <p className="text-lg font-black">{option.label}</p>
+                      <p className="text-base font-black sm:text-lg">{option.label}</p>
                       <p
                         className={`mt-1 text-sm font-semibold ${
                           selected ? "text-white/70" : "text-zinc-500"
@@ -799,6 +829,17 @@ export default function ChecklistQuiz({
               </button>
             </div>
           )}
+
+          {currentStep > 0 ? (
+            <button
+              type="button"
+              onClick={handlePreviousQuestion}
+              disabled={saving}
+              className="mx-auto mt-5 rounded-full px-4 py-2 text-sm font-black text-zinc-500 transition hover:bg-zinc-50 hover:text-[#181818] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Anterior
+            </button>
+          ) : null}
 
           {saving ? (
             <p className="mt-5 text-center text-sm font-bold text-zinc-500">

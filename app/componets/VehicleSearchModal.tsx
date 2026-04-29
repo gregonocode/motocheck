@@ -68,11 +68,11 @@ export default function VehicleSearchModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-5xl overflow-hidden rounded-[22px] bg-[#efefef] shadow-[0_25px_80px_rgba(0,0,0,0.22)]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-3 sm:p-4">
+      <div className="flex max-h-[calc(100dvh-24px)] w-full max-w-5xl flex-col overflow-hidden rounded-[22px] bg-[#efefef] shadow-[0_25px_80px_rgba(0,0,0,0.22)] sm:max-h-[calc(100dvh-32px)]">
         {/* Header */}
-        <div className="flex items-center justify-between bg-[#4b4b4b] px-5 py-4 text-white">
-          <h2 className="text-lg font-extrabold sm:text-[22px]">
+        <div className="flex items-center justify-between gap-3 bg-[#4b4b4b] px-4 py-3 text-white sm:px-5 sm:py-4">
+          <h2 className="min-w-0 flex-1 truncate text-base font-extrabold sm:text-[22px]">
             Detalhes do veículo: {vehicle?.placa || "—"}
           </h2>
 
@@ -86,7 +86,7 @@ export default function VehicleSearchModal({
           </button>
         </div>
 
-        <div className="p-4 sm:p-5">
+        <div className="overflow-y-auto p-3 sm:p-5">
           <div className="rounded-2xl border border-zinc-300 bg-[#f8f8f8] p-4 sm:p-6">
             {vehicle?.cadastroExiste ? (
               <div className="grid gap-6 lg:grid-cols-[1.45fr_0.95fr]">
@@ -99,24 +99,24 @@ export default function VehicleSearchModal({
 
                   <div className="overflow-hidden rounded-[18px] bg-white shadow-[0_10px_24px_rgba(0,0,0,0.10)]">
                     {/* topo da placa */}
-                    <div className="flex h-8 items-center justify-between bg-[#073da7] px-4 text-white">
+                    <div className="flex h-8 items-center justify-between gap-2 bg-[#073da7] px-3 text-white sm:px-4">
                       <span className="text-[10px] font-medium opacity-80">
                         MERCOSUL
                       </span>
-                      <span className="text-[12px] font-bold tracking-[0.45em]">
+                      <span className="text-[11px] font-bold tracking-[0.25em] sm:text-[12px] sm:tracking-[0.45em]">
                         BRASIL
                       </span>
                       <span className="text-lg">🇧🇷</span>
                     </div>
 
                     {/* corpo da placa */}
-                    <div className="flex min-h-[150px] items-center gap-4 px-4 py-4 sm:px-6">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-md border border-zinc-300 text-[10px] font-bold text-zinc-500">
+                    <div className="flex min-h-[112px] items-center gap-3 px-3 py-4 sm:min-h-[150px] sm:gap-4 sm:px-6">
+                      <div className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-md border border-zinc-300 text-[10px] font-bold text-zinc-500 min-[380px]:flex">
                         QR
                       </div>
 
-                      <div className="flex-1">
-                        <div className="text-[42px] font-black leading-none tracking-tight text-black sm:text-[64px]">
+                      <div className="min-w-0 flex-1">
+                        <div className="break-words text-[34px] font-black leading-none tracking-tight text-black min-[380px]:text-[40px] sm:text-[64px]">
                           {formatPlateDisplay(vehicle.placa)}
                         </div>
                         <div className="mt-2 text-[18px] font-bold text-zinc-500">
@@ -153,14 +153,14 @@ export default function VehicleSearchModal({
                     </div>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-3">
+                  <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                     {vehicle.status === "Sem atendimento" ||
                     vehicle.status === "Finalizada" ? (
                       <button
                         type="button"
                         onClick={onStartAttendance}
                         disabled={startingAttendance}
-                        className="rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
+                        className="rounded-2xl bg-[#181818] px-5 py-3 text-center text-sm font-extrabold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
                       >
                         {startingAttendance
                           ? "Iniciando..."
@@ -169,7 +169,7 @@ export default function VehicleSearchModal({
                     ) : vehicle.visitaId ? (
                       <Link
                         href={`/dashboard/atendimentos/${vehicle.visitaId}/quiz`}
-                        className="rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95"
+                        className="rounded-2xl bg-[#181818] px-5 py-3 text-center text-sm font-extrabold text-white transition hover:opacity-95"
                       >
                         Continuar atendimento
                       </Link>
@@ -177,7 +177,7 @@ export default function VehicleSearchModal({
                       <button
                         type="button"
                         onClick={onOpenHistory}
-                        className="rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95"
+                        className="rounded-2xl bg-[#181818] px-5 py-3 text-center text-sm font-extrabold text-white transition hover:opacity-95"
                       >
                         Continuar atendimento
                       </button>
@@ -186,7 +186,7 @@ export default function VehicleSearchModal({
                     <button
                       type="button"
                       onClick={onOpenHistory}
-                      className="rounded-2xl border border-zinc-300 px-5 py-3 text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50"
+                      className="rounded-2xl border border-zinc-300 px-5 py-3 text-center text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50"
                     >
                       Ver histórico
                     </button>
@@ -194,7 +194,7 @@ export default function VehicleSearchModal({
                     <button
                       type="button"
                       onClick={onClose}
-                      className="rounded-2xl border border-zinc-300 px-5 py-3 text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50"
+                      className="rounded-2xl border border-zinc-300 px-5 py-3 text-center text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50"
                     >
                       Fechar
                     </button>
@@ -209,7 +209,7 @@ export default function VehicleSearchModal({
                   </div>
 
                   <div className="rounded-2xl bg-transparent px-1 py-1">
-                    <div className="space-y-3 text-[18px] leading-relaxed text-[#181818]">
+                    <div className="space-y-3 text-base leading-relaxed text-[#181818] sm:text-[18px]">
                       <p>
                         <span className="font-black text-[#0b1d5c]">Marca:</span>{" "}
                         {vehicle.marca || "—"}
@@ -281,11 +281,11 @@ export default function VehicleSearchModal({
                   no sistema. Você pode criar um novo cadastro agora.
                 </p>
 
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                   <button
                     type="button"
                     onClick={onCreateNew}
-                    className="rounded-2xl bg-[#181818] px-5 py-3 text-sm font-extrabold text-white transition hover:opacity-95"
+                    className="rounded-2xl bg-[#181818] px-5 py-3 text-center text-sm font-extrabold text-white transition hover:opacity-95"
                   >
                     Cadastrar veículo
                   </button>
@@ -293,7 +293,7 @@ export default function VehicleSearchModal({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="rounded-2xl border border-zinc-300 px-5 py-3 text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50"
+                    className="rounded-2xl border border-zinc-300 px-5 py-3 text-center text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50"
                   >
                     Fechar
                   </button>
