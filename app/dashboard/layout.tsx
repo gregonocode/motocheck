@@ -6,7 +6,8 @@ import {
   HiOutlineClipboardDocumentList,
   HiOutlineUserCircle,
 } from "react-icons/hi2";
-import { FaCamera, FaUserAlt } from "react-icons/fa";
+import { FaUserAlt } from "react-icons/fa";
+import { LuArrowDownUp } from "react-icons/lu";
 import { CgSearchFound } from "react-icons/cg";
 
 const navItems = [
@@ -24,7 +25,7 @@ const navItems = [
   },
   {
     href: "/dashboard/entradas-saidas",
-    icon: <FaCamera size={18} />,
+    icon: <LuArrowDownUp size={20} />,
     label: "Entrada",
     desktopLabel: "Entradas e saídas",
   },

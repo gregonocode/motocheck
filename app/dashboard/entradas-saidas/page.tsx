@@ -370,7 +370,7 @@ export default function EntradasSaidasPage() {
 
           <p className="mt-3 max-w-3xl text-sm font-medium text-zinc-600 sm:text-base">
             Acompanhe as motos que entraram, continuam em atendimento ou já foram
-            finalizadas. Os filtros usam o horário de Brasília/São Paulo.
+            finalizadas. 
           </p>
         </div>
 
@@ -615,7 +615,7 @@ export default function EntradasSaidasPage() {
                       }}
                       className="rounded-2xl border border-zinc-300 px-4 py-3 text-center text-sm font-black text-[#181818] transition hover:bg-zinc-50"
                     >
-                      PDF
+                      OK
                     </button>
                   )}
                   </div>

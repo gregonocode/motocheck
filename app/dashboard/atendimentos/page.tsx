@@ -160,8 +160,7 @@ export default function AtendimentosPage() {
             Gerencie os atendimentos da oficina.
           </h1>
           <p className="mt-3 max-w-2xl text-sm font-medium text-zinc-600 sm:text-base">
-            Veja atendimentos em andamento, finalizados e aguardando. Aqui será
-            o ponto central para abrir cada visita e seguir no fluxo estilo quiz.
+            Veja atendimentos em andamento, finalizados e aguardando.
           </p>
         </div>
 
