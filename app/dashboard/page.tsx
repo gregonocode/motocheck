@@ -109,31 +109,19 @@ export default function DashboardPage() {
   const [resumo, setResumo] = useState<DashboardResumo>(defaultResumo);
   const [atendimentos, setAtendimentos] = useState<AtendimentoRecente[]>([]);
 
-  function getQuizUrlFromQr(decodedText: string) {
+  function getQuizPathFromQr(decodedText: string) {
     try {
       const url = new URL(decodedText);
-      const allowedHosts = new Set([
-        "nenemautopecas.netlify.app",
-        "nenemautopecas.online",
-        "localhost:3000",
-      ]);
-
-      if (typeof window !== "undefined") {
-        allowedHosts.add(window.location.host);
-      }
-
-      const isAllowedHost = allowedHosts.has(url.host);
+      const isSameHost =
+        typeof window !== "undefined" && url.host === window.location.host;
 
       const isQuizPath =
         url.pathname.startsWith("/dashboard/atendimentos/") &&
         url.pathname.endsWith("/quiz");
 
-      if (!isAllowedHost || !isQuizPath) return null;
+      if (!isSameHost || !isQuizPath) return null;
 
-      const isCurrentHost =
-        typeof window !== "undefined" && url.host === window.location.host;
-
-      return isCurrentHost ? `${url.pathname}${url.search}` : url.href;
+      return `${url.pathname}${url.search}`;
     } catch {
       const isRelativeQuizPath =
         decodedText.startsWith("/dashboard/atendimentos/") &&
@@ -218,9 +206,9 @@ export default function DashboardPage() {
             },
           },
           async (decodedText: string) => {
-            const quizUrl = getQuizUrlFromQr(decodedText);
+            const path = getQuizPathFromQr(decodedText);
 
-            if (!quizUrl) {
+            if (!path) {
               toast.error("QR Code inválido para este sistema.");
               return;
             }
@@ -234,13 +222,7 @@ export default function DashboardPage() {
 
             qrScannerInstanceRef.current = null;
             setScannerOpen(false);
-
-            if (/^https?:\/\//i.test(quizUrl)) {
-              window.location.href = quizUrl;
-              return;
-            }
-
-            router.push(quizUrl);
+            router.push(path);
           },
           () => {
             // Leitura em andamento; não precisa exibir erro a cada frame.

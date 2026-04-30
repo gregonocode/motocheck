@@ -50,6 +50,8 @@ type CanvasPoint = {
 };
 
 const PHOTO_QUESTION_ID = "f2222222-2222-2222-2222-222222222222";
+const FALLBACK_APP_ORIGIN = "https://nenemautopecas.netlify.app";
+const FALLBACK_QUERY_PARAM = "fallbackHost";
 
 const brushColors = [
   { label: "Vermelho", value: "#ef4444" },
@@ -101,6 +103,26 @@ export default function ChecklistQuiz({
     return "Sem atendimento";
   }
 
+  function redirectToFallbackHost() {
+    const currentUrl = new URL(window.location.href);
+    const fallbackUrl = new URL(currentUrl.pathname, FALLBACK_APP_ORIGIN);
+
+    currentUrl.searchParams.forEach((value, key) => {
+      fallbackUrl.searchParams.set(key, value);
+    });
+
+    if (
+      currentUrl.origin === FALLBACK_APP_ORIGIN ||
+      currentUrl.searchParams.get(FALLBACK_QUERY_PARAM) === "netlify"
+    ) {
+      return false;
+    }
+
+    fallbackUrl.searchParams.set(FALLBACK_QUERY_PARAM, "netlify");
+    window.location.href = fallbackUrl.toString();
+    return true;
+  }
+
   async function loadVisitaData() {
     try {
       setLoadingPage(true);
@@ -114,6 +136,8 @@ export default function ChecklistQuiz({
       if (visitaError) throw visitaError;
 
       if (!visita) {
+        if (redirectToFallbackHost()) return;
+
         toast.error("Atendimento não encontrado.");
         return;
       }
