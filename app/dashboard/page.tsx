@@ -112,15 +112,23 @@ export default function DashboardPage() {
   function getQuizPathFromQr(decodedText: string) {
     try {
       const url = new URL(decodedText);
+      const allowedHosts = new Set([
+        "nenemautopecas.netlify.app",
+        "nenemautopecas.online",
+        "localhost:3000",
+      ]);
 
-      const isSameHost =
-        typeof window !== "undefined" && url.host === window.location.host;
+      if (typeof window !== "undefined") {
+        allowedHosts.add(window.location.host);
+      }
+
+      const isAllowedHost = allowedHosts.has(url.host);
 
       const isQuizPath =
         url.pathname.startsWith("/dashboard/atendimentos/") &&
         url.pathname.endsWith("/quiz");
 
-      if (!isSameHost || !isQuizPath) return null;
+      if (!isAllowedHost || !isQuizPath) return null;
 
       return `${url.pathname}${url.search}`;
     } catch {
