@@ -1,9 +1,11 @@
+//app\dashboard\page.tsx
 "use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { Html5Qrcode } from "html5-qrcode";
 import CreateVehicleModal from "@/app/components/CreateVehicleModal";
 import VehicleSearchModal, {
   VehicleSearchData,
@@ -14,6 +16,8 @@ import {
   HiOutlineMagnifyingGlass,
   HiOutlineArrowRightOnRectangle,
   HiOutlineClock,
+  HiOutlineQrCode,
+  HiOutlineXMark,
 } from "react-icons/hi2";
 import { FaCheckCircle } from "react-icons/fa";
 import { CgSearchFound } from "react-icons/cg";
@@ -85,6 +89,11 @@ export default function DashboardPage() {
   const supabase = createClient();
 
   const [headerDropdownOpen, setHeaderDropdownOpen] = useState(false);
+  const scannerRef = useRef<HTMLDivElement | null>(null);
+  const qrScannerInstanceRef = useRef<Html5Qrcode | null>(null);
+
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerLoading, setScannerLoading] = useState(false);
 
   const [plate, setPlate] = useState("");
   const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
@@ -99,6 +108,29 @@ export default function DashboardPage() {
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [resumo, setResumo] = useState<DashboardResumo>(defaultResumo);
   const [atendimentos, setAtendimentos] = useState<AtendimentoRecente[]>([]);
+
+  function getQuizPathFromQr(decodedText: string) {
+    try {
+      const url = new URL(decodedText);
+
+      const isSameHost =
+        typeof window !== "undefined" && url.host === window.location.host;
+
+      const isQuizPath =
+        url.pathname.startsWith("/dashboard/atendimentos/") &&
+        url.pathname.endsWith("/quiz");
+
+      if (!isSameHost || !isQuizPath) return null;
+
+      return `${url.pathname}${url.search}`;
+    } catch {
+      const isRelativeQuizPath =
+        decodedText.startsWith("/dashboard/atendimentos/") &&
+        decodedText.endsWith("/quiz");
+
+      return isRelativeQuizPath ? decodedText : null;
+    }
+  }
 
   function normalizePlate(value: string) {
     return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
@@ -146,6 +178,86 @@ export default function DashboardPage() {
     void Promise.resolve().then(() => loadDashboardData());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!scannerOpen) return;
+
+    let cancelled = false;
+
+    async function startScanner() {
+      try {
+        setScannerLoading(true);
+
+        const { Html5Qrcode } = await import("html5-qrcode");
+
+        if (cancelled) return;
+
+        const scannerElementId = "motocheck-qr-scanner";
+
+        const scanner = new Html5Qrcode(scannerElementId);
+        qrScannerInstanceRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: {
+              width: 240,
+              height: 240,
+            },
+          },
+          async (decodedText: string) => {
+            const path = getQuizPathFromQr(decodedText);
+
+            if (!path) {
+              toast.error("QR Code inválido para este sistema.");
+              return;
+            }
+
+            try {
+              await scanner.stop();
+              await scanner.clear();
+            } catch {
+              // Ignora erro ao limpar câmera.
+            }
+
+            qrScannerInstanceRef.current = null;
+            setScannerOpen(false);
+            router.push(path);
+          },
+          () => {
+            // Leitura em andamento; não precisa exibir erro a cada frame.
+          }
+        );
+      } catch (error) {
+        console.error("Erro ao abrir scanner:", error);
+        toast.error("Não foi possível abrir a câmera para escanear.");
+        setScannerOpen(false);
+      } finally {
+        setScannerLoading(false);
+      }
+    }
+
+    void Promise.resolve().then(() => startScanner());
+
+    return () => {
+      cancelled = true;
+
+      const scanner = qrScannerInstanceRef.current;
+
+      if (scanner) {
+        scanner
+          .stop()
+          .then(() => scanner.clear())
+          .catch(() => {
+            // Ignora erro ao fechar câmera.
+          });
+
+        qrScannerInstanceRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scannerOpen]);
 
   async function handleLogout() {
     try {
@@ -386,6 +498,15 @@ export default function DashboardPage() {
               <h1 className="text-xl font-black">MotoCheck</h1>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#181818] text-yellow-200 shadow-sm transition active:scale-95"
+            aria-label="Escanear QR Code"
+          >
+            <HiOutlineQrCode size={23} />
+          </button>
         </div>
 
         {/* Header */}
@@ -730,6 +851,58 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {scannerOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-[30px] bg-white p-5 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
+                  Scanner MotoCheck
+                </p>
+                <h2 className="mt-1 text-2xl font-black text-[#181818]">
+                  Escaneie o QR Code
+                </h2>
+                <p className="mt-2 text-sm font-semibold leading-relaxed text-zinc-500">
+                  Aponte a câmera para o QR Code exibido no computador para
+                  continuar o checklist pelo celular.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setScannerOpen(false)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-600 transition hover:bg-zinc-200"
+                aria-label="Fechar scanner"
+              >
+                <HiOutlineXMark size={22} />
+              </button>
+            </div>
+
+            <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-black">
+              <div
+                ref={scannerRef}
+                id="motocheck-qr-scanner"
+                className="min-h-[280px] w-full"
+              />
+            </div>
+
+            {scannerLoading ? (
+              <p className="mt-4 text-center text-sm font-bold text-zinc-500">
+                Abrindo câmera...
+              </p>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => setScannerOpen(false)}
+              className="mt-4 w-full rounded-2xl border border-zinc-300 px-5 py-3 text-sm font-black text-[#181818] transition hover:bg-zinc-50"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <VehicleSearchModal
         open={vehicleModalOpen}

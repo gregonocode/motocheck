@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import QRCode from "qrcode";
 import {
   useEffect,
   useMemo,
@@ -14,6 +16,8 @@ import {
   HiOutlineArrowLeft,
   HiOutlineCamera,
   HiOutlineCheckCircle,
+  HiOutlineDevicePhoneMobile,
+  HiOutlineQrCode,
   HiOutlineTrash,
 } from "react-icons/hi2";
 import { createClient } from "@/lib/supabase/client";
@@ -74,6 +78,10 @@ export default function ChecklistQuiz({
   const [textareaValue, setTextareaValue] = useState("");
   const [loadingPage, setLoadingPage] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [checkingDevice, setCheckingDevice] = useState(true);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [continueOnDesktop, setContinueOnDesktop] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
 
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [brushColor, setBrushColor] = useState("#ef4444");
@@ -192,6 +200,37 @@ export default function ChecklistQuiz({
         window.clearTimeout(advanceTimeoutRef.current);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      const userAgent = window.navigator.userAgent.toLowerCase();
+
+      const isMobile =
+        /android|iphone|ipad|ipod|mobile/i.test(userAgent) ||
+        window.matchMedia("(pointer: coarse)").matches ||
+        window.innerWidth < 768;
+
+      const currentUrl = window.location.href;
+
+      setIsMobileDevice(isMobile);
+
+      QRCode.toDataURL(currentUrl, {
+        width: 320,
+        margin: 2,
+        errorCorrectionLevel: "M",
+      })
+        .then((url) => {
+          setQrCodeUrl(url);
+        })
+        .catch((error) => {
+          console.error("Erro ao gerar QR Code:", error);
+          toast.error("Não foi possível gerar o QR Code.");
+        })
+        .finally(() => {
+          setCheckingDevice(false);
+        });
+    });
   }, []);
 
   function drawImageOnCanvas(dataUrl: string) {
@@ -580,6 +619,73 @@ export default function ChecklistQuiz({
           >
             Voltar
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!checkingDevice && !isMobileDevice && !continueOnDesktop) {
+    return (
+      <div className="min-h-screen bg-[#F7F8FA] px-4 py-6">
+        <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-xl flex-col justify-center">
+          <div className="rounded-[34px] border border-zinc-200 bg-white p-6 text-center shadow-sm">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#181818] text-yellow-200">
+              <HiOutlineQrCode size={34} />
+            </div>
+
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-zinc-500">
+              Continuar no celular
+            </p>
+
+            <h1 className="mt-3 text-3xl font-black leading-tight text-[#181818]">
+              Escaneie o QR Code para preencher pelo celular
+            </h1>
+
+            <p className="mt-3 text-sm font-semibold leading-relaxed text-zinc-500">
+              Esse checklist usa câmera e marcação na foto. Para uma
+              experiência melhor, continue pelo celular.
+            </p>
+
+            <div className="mt-6 rounded-[28px] border border-zinc-200 bg-[#FAFAFA] p-5">
+              {qrCodeUrl ? (
+                <Image
+                  src={qrCodeUrl}
+                  alt="QR Code para continuar checklist no celular"
+                  width={256}
+                  height={256}
+                  unoptimized
+                  className="mx-auto h-64 w-64 rounded-2xl bg-white p-3"
+                />
+              ) : (
+                <div className="mx-auto flex h-64 w-64 items-center justify-center rounded-2xl bg-white text-sm font-bold text-zinc-500">
+                  Gerando QR Code...
+                </div>
+              )}
+
+            </div>
+
+            <div className="mt-6 grid gap-3">
+              <button
+                type="button"
+                onClick={() => setContinueOnDesktop(true)}
+                className="rounded-[22px] bg-[#181818] px-5 py-4 text-sm font-black text-white transition hover:opacity-95"
+              >
+                Continuar por aqui mesmo
+              </button>
+
+              <Link
+                href={`/dashboard/entradas-saidas/${visitaId}`}
+                className="rounded-[22px] border border-zinc-300 px-5 py-4 text-sm font-black text-[#181818] transition hover:bg-zinc-50"
+              >
+                Voltar para detalhes
+              </Link>
+            </div>
+
+            <div className="mt-6 flex items-center justify-center gap-2 text-sm font-bold text-zinc-500">
+              <HiOutlineDevicePhoneMobile size={18} />
+              Ideal para abrir a câmera e tirar foto da moto.
+            </div>
+          </div>
         </div>
       </div>
     );
