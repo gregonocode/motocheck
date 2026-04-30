@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Nenem Autopeças",
-    short_name: "Nenem",
+    short_name: "Moto Check",
     description:
       "Sistema da Nenem Autopeças para atendimento e controle da oficina.",
     start_url: "/dashboard",

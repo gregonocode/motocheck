@@ -109,7 +109,7 @@ export default function DashboardPage() {
   const [resumo, setResumo] = useState<DashboardResumo>(defaultResumo);
   const [atendimentos, setAtendimentos] = useState<AtendimentoRecente[]>([]);
 
-  function getQuizPathFromQr(decodedText: string) {
+  function getQuizUrlFromQr(decodedText: string) {
     try {
       const url = new URL(decodedText);
       const allowedHosts = new Set([
@@ -130,7 +130,10 @@ export default function DashboardPage() {
 
       if (!isAllowedHost || !isQuizPath) return null;
 
-      return `${url.pathname}${url.search}`;
+      const isCurrentHost =
+        typeof window !== "undefined" && url.host === window.location.host;
+
+      return isCurrentHost ? `${url.pathname}${url.search}` : url.href;
     } catch {
       const isRelativeQuizPath =
         decodedText.startsWith("/dashboard/atendimentos/") &&
@@ -215,9 +218,9 @@ export default function DashboardPage() {
             },
           },
           async (decodedText: string) => {
-            const path = getQuizPathFromQr(decodedText);
+            const quizUrl = getQuizUrlFromQr(decodedText);
 
-            if (!path) {
+            if (!quizUrl) {
               toast.error("QR Code inválido para este sistema.");
               return;
             }
@@ -231,7 +234,13 @@ export default function DashboardPage() {
 
             qrScannerInstanceRef.current = null;
             setScannerOpen(false);
-            router.push(path);
+
+            if (/^https?:\/\//i.test(quizUrl)) {
+              window.location.href = quizUrl;
+              return;
+            }
+
+            router.push(quizUrl);
           },
           () => {
             // Leitura em andamento; não precisa exibir erro a cada frame.
