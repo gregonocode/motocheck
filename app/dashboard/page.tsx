@@ -600,7 +600,7 @@ export default function DashboardPage() {
                     }
                   }}
                   placeholder="Ex: QWE1A23"
-                  className="w-full bg-transparent text-sm font-semibold uppercase text-[#181818] outline-none placeholder:text-zinc-400"
+                  className="w-full bg-transparent text-base font-semibold uppercase text-[#181818] outline-none placeholder:text-zinc-400"
                 />
 
                 <button

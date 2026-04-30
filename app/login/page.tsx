@@ -132,7 +132,7 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="w-full bg-transparent text-[15px] font-medium text-[#181818] outline-none placeholder:text-zinc-400"
+                      className="w-full bg-transparent text-base font-medium text-[#181818] outline-none placeholder:text-zinc-400"
                     />
                   </div>
                 </div>
@@ -154,7 +154,7 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full bg-transparent text-[15px] font-medium text-[#181818] outline-none placeholder:text-zinc-400"
+                      className="w-full bg-transparent text-base font-medium text-[#181818] outline-none placeholder:text-zinc-400"
                     />
                   </div>
                 </div>
