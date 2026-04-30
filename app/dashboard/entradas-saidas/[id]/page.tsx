@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -145,6 +145,101 @@ function getQuestionTitle(item: ChecklistItem) {
   }
 
   return "Item do checklist";
+}
+
+function EntradaPhotoPreview({ src }: { src: string }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let cancelled = false;
+    const image = new window.Image();
+
+    function drawImage() {
+      if (cancelled || !canvas) return;
+      if (!image.naturalWidth || !image.naturalHeight) return;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(1, Math.round(rect.width));
+      const height = Math.max(1, Math.round(rect.height));
+      const pixelRatio = window.devicePixelRatio || 1;
+
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+
+      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+
+      const isPortrait = image.naturalHeight > image.naturalWidth;
+      const targetWidth = isPortrait ? image.naturalHeight : image.naturalWidth;
+      const targetHeight = isPortrait ? image.naturalWidth : image.naturalHeight;
+      const scale = Math.min(width / targetWidth, height / targetHeight);
+      const drawWidth = image.naturalWidth * scale;
+      const drawHeight = image.naturalHeight * scale;
+
+      ctx.save();
+      ctx.translate(width / 2, height / 2);
+
+      if (isPortrait) {
+        ctx.rotate(Math.PI / 2);
+      }
+
+      ctx.drawImage(
+        image,
+        -drawWidth / 2,
+        -drawHeight / 2,
+        drawWidth,
+        drawHeight
+      );
+      ctx.restore();
+    }
+
+    image.onload = () => {
+      if (cancelled) return;
+      setLoadError(false);
+      drawImage();
+    };
+
+    image.onerror = () => {
+      if (!cancelled) {
+        setLoadError(true);
+      }
+    };
+
+    image.src = src;
+
+    window.addEventListener("resize", drawImage);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("resize", drawImage);
+    };
+  }, [src]);
+
+  if (loadError) {
+    return (
+      <div className="flex aspect-[16/9] min-h-[220px] w-full items-center justify-center rounded-3xl bg-zinc-50 p-6 text-center">
+        <p className="text-sm font-bold text-zinc-500">
+          Imagem cadastrada, mas nao foi possivel carregar.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <canvas
+      ref={canvasRef}
+      role="img"
+      aria-label="Foto da entrada da moto"
+      className="block aspect-[16/9] min-h-[220px] w-full rounded-3xl bg-zinc-50"
+    />
+  );
 }
 
 export default function EntradaSaidaDetalhePage() {
@@ -521,6 +616,24 @@ export default function EntradaSaidaDetalhePage() {
           </div>
         )}
       </div>
+
+      {visita.foto_entrada_url ? (
+        <div className="mb-6 rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="mb-5">
+            <p className="text-sm font-black uppercase tracking-wide text-zinc-500">
+              Foto da entrada
+            </p>
+            <h2 className="mt-1 text-2xl font-black text-[#181818]">
+              Imagem registrada
+            </h2>
+            <p className="mt-2 text-sm font-medium leading-relaxed text-zinc-500">
+              A foto aparece na horizontal, seguindo o mesmo ajuste usado no PDF.
+            </p>
+          </div>
+
+          <EntradaPhotoPreview src={visita.foto_entrada_url} />
+        </div>
+      ) : null}
 
       <div className="rounded-[28px] border border-dashed border-zinc-300 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
