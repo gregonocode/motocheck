@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HiOutlineClipboardDocumentList } from "react-icons/hi2";
+import {
+  HiOutlineClipboardDocumentList,
+  HiOutlineUserCircle,
+} from "react-icons/hi2";
 import { FaCamera, FaUserAlt } from "react-icons/fa";
 import { CgSearchFound } from "react-icons/cg";
 
@@ -30,6 +33,12 @@ const navItems = [
     icon: <FaUserAlt size={17} />,
     label: "Clientes",
     desktopLabel: "Clientes",
+  },
+  {
+    href: "/dashboard/perfil",
+    icon: <HiOutlineUserCircle size={22} />,
+    label: "Perfil",
+    desktopLabel: "Perfil",
   },
 ];
 
