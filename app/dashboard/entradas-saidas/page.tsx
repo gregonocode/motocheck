@@ -662,8 +662,8 @@ export default function EntradasSaidasPage() {
       </div>
 
       {confirmFinalizar ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
-          <div className="w-full max-w-md rounded-[28px] bg-white p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-4 py-6">
+          <div className="max-h-[calc(100dvh-3rem)] w-full max-w-md overflow-y-auto rounded-[28px] bg-white p-5 shadow-2xl">
             <div className="mb-4">
               <p className="text-sm font-black uppercase tracking-[0.18em] text-zinc-500">
                 Finalizar atendimento
