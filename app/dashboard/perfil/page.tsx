@@ -180,7 +180,7 @@ export default function PerfilPage() {
       </div>
 
       {logoutModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-[30px] bg-white p-5 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
