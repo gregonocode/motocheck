@@ -5,7 +5,6 @@ export const runtime = "nodejs";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const cronSecret = process.env.CRON_SECRET!;
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
   auth: {
@@ -15,9 +14,10 @@ const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
 
 export async function GET(request: Request) {
   try {
-    const authHeader = request.headers.get("authorization");
+    const { searchParams } = new URL(request.url);
+    const secret = searchParams.get("secret");
 
-    if (authHeader !== `Bearer ${cronSecret}`) {
+    if (secret !== process.env.CRON_SECRET) {
       return NextResponse.json(
         { error: "Não autorizado" },
         { status: 401 }
