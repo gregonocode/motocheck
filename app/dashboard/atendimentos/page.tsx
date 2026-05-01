@@ -22,6 +22,8 @@ type AtendimentoItem = {
   saida?: string | null;
 };
 
+const ITEMS_PER_PAGE = 10;
+
 function getStatusClasses(status: AtendimentoItem["status"]) {
   switch (status) {
     case "Finalizada":
@@ -44,6 +46,7 @@ export default function AtendimentosPage() {
   const [statusFilter, setStatusFilter] = useState<"Todos" | "Em andamento" | "Finalizada" | "Aguardando">("Todos");
   const [atendimentos, setAtendimentos] = useState<AtendimentoItem[]>([]);
   const [loadingAtendimentos, setLoadingAtendimentos] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   function formatStatus(status?: string | null): AtendimentoItem["status"] {
     if (status === "aberta" || status === "em_andamento") return "Em andamento";
@@ -142,6 +145,26 @@ export default function AtendimentosPage() {
 
     return matchesSearch && matchesStatus;
   });
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAtendimentos.length / ITEMS_PER_PAGE)
+  );
+  const activePage = Math.min(currentPage, totalPages);
+  const pageStartIndex = (activePage - 1) * ITEMS_PER_PAGE;
+  const pageEndIndex = pageStartIndex + ITEMS_PER_PAGE;
+  const paginatedAtendimentos = filteredAtendimentos.slice(
+    pageStartIndex,
+    pageEndIndex
+  );
+  const showingStart = filteredAtendimentos.length ? pageStartIndex + 1 : 0;
+  const showingEnd = Math.min(pageEndIndex, filteredAtendimentos.length);
+  const firstVisiblePage = Math.max(1, Math.min(activePage - 2, totalPages - 4));
+  const lastVisiblePage = Math.min(totalPages, firstVisiblePage + 4);
+  const visiblePageNumbers = Array.from(
+    { length: lastVisiblePage - firstVisiblePage + 1 },
+    (_, index) => firstVisiblePage + index
+  );
 
   const totalAtendimentos = atendimentos.length;
   const emAndamento = atendimentos.filter((item) => item.status === "Em andamento").length;
@@ -251,7 +274,10 @@ export default function AtendimentosPage() {
               <input
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Ex: QEA4209, Carlos Henrique..."
                 className="w-full bg-transparent text-sm font-semibold text-[#181818] outline-none placeholder:text-zinc-400"
               />
@@ -262,7 +288,10 @@ export default function AtendimentosPage() {
                 (status) => (
                   <button
                     key={status}
-                    onClick={() => setStatusFilter(status)}
+                    onClick={() => {
+                      setStatusFilter(status);
+                      setCurrentPage(1);
+                    }}
                     className={`rounded-2xl px-4 py-3 text-sm font-extrabold transition ${
                       statusFilter === status
                         ? "bg-[#181818] text-white"
@@ -310,8 +339,8 @@ export default function AtendimentosPage() {
             <div className="px-5 py-10 text-center text-sm font-semibold text-zinc-500">
               Carregando atendimentos...
             </div>
-          ) : filteredAtendimentos.length ? (
-            filteredAtendimentos.map((item) => (
+          ) : paginatedAtendimentos.length ? (
+            paginatedAtendimentos.map((item) => (
               <div
                 key={item.id}
                 className="grid grid-cols-6 items-center border-t border-zinc-200 px-5 py-4 text-sm font-semibold text-[#181818]"
@@ -354,8 +383,8 @@ export default function AtendimentosPage() {
                 Carregando atendimentos...
               </p>
             </div>
-          ) : filteredAtendimentos.length ? (
-            filteredAtendimentos.map((item) => (
+          ) : paginatedAtendimentos.length ? (
+            paginatedAtendimentos.map((item) => (
               <div
                 key={item.id}
                 className="rounded-3xl border border-zinc-200 p-4"
@@ -419,6 +448,53 @@ export default function AtendimentosPage() {
             </div>
           )}
         </div>
+
+        {!loadingAtendimentos && filteredAtendimentos.length > 0 && (
+          <div className="mt-5 flex flex-col gap-3 border-t border-zinc-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-zinc-500">
+              Mostrando {showingStart}-{showingEnd} de{" "}
+              {filteredAtendimentos.length} atendimento(s)
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={activePage === 1}
+                className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Anterior
+              </button>
+
+              {visiblePageNumbers.map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => setCurrentPage(page)}
+                  className={`h-10 w-10 rounded-xl text-sm font-extrabold transition ${
+                    activePage === page
+                      ? "bg-[#181818] text-white"
+                      : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                  }`}
+                  aria-current={activePage === page ? "page" : undefined}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                }
+                disabled={activePage === totalPages}
+                className="rounded-xl border border-zinc-300 px-4 py-2 text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Proxima
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

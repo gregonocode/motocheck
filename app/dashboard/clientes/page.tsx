@@ -10,7 +10,7 @@ import {
   HiOutlinePhone,
   HiOutlineUserGroup,
 } from "react-icons/hi2";
-import { FaMotorcycle, FaUserAlt } from "react-icons/fa";
+import { FaCarSide, FaUserAlt, FaWhatsapp } from "react-icons/fa";
 
 type ClienteRow = {
   id: string;
@@ -52,6 +52,17 @@ function formatDate(value?: string | null) {
 
 function isActiveStatus(status?: string | null) {
   return status === "aberta" || status === "em_andamento" || status === "aguardando";
+}
+
+function getWhatsAppHref(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+
+  if (!digits) return null;
+
+  const phoneWithCountryCode =
+    digits.length === 10 || digits.length === 11 ? `55${digits}` : digits;
+
+  return `https://wa.me/${phoneWithCountryCode}`;
 }
 
 export default function ClientesPage() {
@@ -167,7 +178,7 @@ export default function ClientesPage() {
           </h1>
 
           <p className="mt-3 max-w-3xl text-sm font-medium text-zinc-600 sm:text-base">
-            Consulte contatos, motos vinculadas e clientes com atendimento ativo.
+            Consulte contatos, veiculos vinculados e clientes com atendimento ativo.
           </p>
         </div>
 
@@ -205,10 +216,10 @@ export default function ClientesPage() {
 
         <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-yellow-100 text-[#181818]">
-            <FaMotorcycle size={20} />
+            <FaCarSide size={20} />
           </div>
 
-          <p className="text-sm font-bold text-zinc-500">Motos vinculadas</p>
+          <p className="text-sm font-bold text-zinc-500">Veiculos vinculados</p>
           <h3 className="mt-2 text-4xl font-black text-[#181818]">
             {totalMotos}
           </h3>
@@ -219,7 +230,7 @@ export default function ClientesPage() {
             <FaUserAlt size={18} />
           </div>
 
-          <p className="text-sm font-bold text-zinc-500">Com moto cadastrada</p>
+          <p className="text-sm font-bold text-zinc-500">Com veiculo cadastrado</p>
           <h3 className="mt-2 text-4xl font-black text-[#181818]">
             {clientesComMoto}
           </h3>
@@ -290,63 +301,80 @@ export default function ClientesPage() {
           </div>
         ) : (
           <div className="divide-y divide-zinc-200">
-            {filteredClientes.map((cliente) => (
-              <div
-                key={cliente.id}
-                className="grid gap-4 p-5 transition hover:bg-zinc-50 lg:grid-cols-[1.2fr_1fr_auto] lg:items-center"
-              >
-                <div>
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-xl bg-[#181818] px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
-                      Cliente
-                    </span>
+            {filteredClientes.map((cliente) => {
+              const whatsappHref = getWhatsAppHref(cliente.telefone);
 
-                    {cliente.visitasAtivas > 0 ? (
-                      <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-black text-yellow-700">
-                        Em atendimento
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <p className="text-lg font-black text-[#181818]">
-                    {cliente.nome}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-zinc-500">
-                    {cliente.telefone}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-3">
-                  <div className="rounded-2xl bg-zinc-50 p-3">
-                    <p className="font-black text-zinc-500">Cadastro</p>
-                    <p className="mt-1 font-bold text-[#181818]">
-                      {cliente.criadoEm}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-zinc-50 p-3">
-                    <p className="font-black text-zinc-500">Motos</p>
-                    <p className="mt-1 font-bold text-[#181818]">
-                      {cliente.totalMotos}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-zinc-50 p-3">
-                    <p className="font-black text-zinc-500">Ativos</p>
-                    <p className="mt-1 font-bold text-[#181818]">
-                      {cliente.visitasAtivas}
-                    </p>
-                  </div>
-                </div>
-
-                <Link
-                  href="/dashboard"
-                  className="rounded-2xl border border-zinc-300 px-4 py-3 text-center text-sm font-black text-[#181818] transition hover:bg-white"
+              return (
+                <div
+                  key={cliente.id}
+                  className="grid gap-4 p-5 transition hover:bg-zinc-50 lg:grid-cols-[1.2fr_1fr_auto] lg:items-center"
                 >
-                  Ver painel
-                </Link>
-              </div>
-            ))}
+                  <div>
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <span className="rounded-xl bg-[#181818] px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
+                        Cliente
+                      </span>
+
+                      {cliente.visitasAtivas > 0 ? (
+                        <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-black text-yellow-700">
+                          Em atendimento
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <p className="text-lg font-black text-[#181818]">
+                      {cliente.nome}
+                    </p>
+                    {whatsappHref ? (
+                      <a
+                        href={whatsappHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-green-700 transition hover:text-green-800 hover:underline"
+                      >
+                        <FaWhatsapp size={16} />
+                        {cliente.telefone}
+                      </a>
+                    ) : (
+                      <p className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-zinc-500">
+                        <FaWhatsapp size={16} />
+                        {cliente.telefone}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-3">
+                    <div className="rounded-2xl bg-zinc-50 p-3">
+                      <p className="font-black text-zinc-500">Cadastro</p>
+                      <p className="mt-1 font-bold text-[#181818]">
+                        {cliente.criadoEm}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-zinc-50 p-3">
+                      <p className="font-black text-zinc-500">Veiculos</p>
+                      <p className="mt-1 font-bold text-[#181818]">
+                        {cliente.totalMotos}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl bg-zinc-50 p-3">
+                      <p className="font-black text-zinc-500">Ativos</p>
+                      <p className="mt-1 font-bold text-[#181818]">
+                        {cliente.visitasAtivas}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Link
+                    href="/dashboard"
+                    className="rounded-2xl border border-zinc-300 px-4 py-3 text-center text-sm font-black text-[#181818] transition hover:bg-white"
+                  >
+                    Ver painel
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
