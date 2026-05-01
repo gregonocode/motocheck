@@ -3,6 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 
+type FotoAntiga = {
+  name: string;
+  created_at: string;
+};
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -25,11 +30,7 @@ export async function GET(request: Request) {
     }
 
     const { data: fotosAntigas, error: queryError } = await supabaseAdmin
-      .schema("storage")
-      .from("objects")
-      .select("name, created_at")
-      .eq("bucket_id", "fotos")
-      .lt("created_at", new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString());
+      .rpc("buscar_fotos_antigas_para_limpeza");
 
     if (queryError) {
       console.error("Erro ao buscar fotos antigas:", queryError);
@@ -48,7 +49,9 @@ export async function GET(request: Request) {
       });
     }
 
-    const paths = fotosAntigas.map((foto) => foto.name);
+    const paths = (fotosAntigas as FotoAntiga[]).map(
+      (foto: FotoAntiga) => foto.name
+    );
 
     const { data: deletedData, error: deleteError } = await supabaseAdmin
       .storage
