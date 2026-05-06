@@ -58,15 +58,10 @@ type ChecklistItem = {
   ordem: number | null;
 };
 
-const questionLabels: Record<string, string> = {
-  "a1111111-1111-1111-1111-111111111111": "Nível de combustível",
-  "b1111111-1111-1111-1111-111111111111": "Pisca esquerdo",
-  "b2222222-2222-2222-2222-222222222222": "Pisca direito",
-  "b3333333-3333-3333-3333-333333333333": "Farol",
-  "b4444444-4444-4444-4444-444444444444": "Buzina",
-  "c2222222-2222-2222-2222-222222222222": "Caximbo de vela",
-  "f1111111-1111-1111-1111-111111111111": "Observações da entrada",
-  "f2222222-2222-2222-2222-222222222222": "Foto da entrada",
+type ChecklistModelItem = {
+  id: string;
+  nome: string | null;
+  ativo: boolean | null;
 };
 
 const valueLabels: Record<string, string> = {
@@ -80,17 +75,6 @@ const valueLabels: Record<string, string> = {
   foto_ok: "Foto adicionada",
   foto_depois: "Adicionar depois",
 };
-
-const requiredChecklistItemIds = [
-  "a1111111-1111-1111-1111-111111111111", // combustível
-  "b1111111-1111-1111-1111-111111111111", // pisca esquerdo
-  "b2222222-2222-2222-2222-222222222222", // pisca direito
-  "b3333333-3333-3333-3333-333333333333", // farol
-  "b4444444-4444-4444-4444-444444444444", // buzina
-  "c2222222-2222-2222-2222-222222222222", // caximbo de vela
-  "f1111111-1111-1111-1111-111111111111", // observações
-  "f2222222-2222-2222-2222-222222222222", // foto ou adicionar depois
-];
 
 function formatStatus(status?: string | null) {
   if (status === "aberta" || status === "em_andamento") return "Em andamento";
@@ -139,9 +123,12 @@ function formatAnswer(item: ChecklistItem) {
   return valueLabels[value] ?? value;
 }
 
-function getQuestionTitle(item: ChecklistItem) {
-  if (item.item_modelo_id && questionLabels[item.item_modelo_id]) {
-    return questionLabels[item.item_modelo_id];
+function getQuestionTitle(
+  item: ChecklistItem,
+  checklistModelMap: Map<string, ChecklistModelItem>
+) {
+  if (item.item_modelo_id) {
+    return checklistModelMap.get(item.item_modelo_id)?.nome ?? "Item do checklist";
   }
 
   return "Item do checklist";
@@ -254,9 +241,24 @@ export default function EntradaSaidaDetalhePage() {
   const [moto, setMoto] = useState<MotoData | null>(null);
   const [cliente, setCliente] = useState<ClienteData | null>(null);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [checklistModels, setChecklistModels] = useState<ChecklistModelItem[]>(
+    []
+  );
   const [showFinalizarModal, setShowFinalizarModal] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [showPdfBlockedModal, setShowPdfBlockedModal] = useState(false);
+
+  const checklistModelMap = useMemo(
+    () => new Map(checklistModels.map((item) => [item.id, item])),
+    [checklistModels]
+  );
+  const requiredChecklistItemIds = useMemo(
+    () =>
+      checklistModels
+        .filter((item) => item.ativo !== false)
+        .map((item) => item.id),
+    [checklistModels]
+  );
 
   async function loadData() {
     try {
@@ -315,6 +317,16 @@ export default function EntradaSaidaDetalhePage() {
       if (checklistError) throw checklistError;
 
       setChecklist((checklistData ?? []) as ChecklistItem[]);
+
+      const { data: checklistModelData, error: checklistModelError } =
+        await supabase
+          .from("checklist_itens_modelo")
+          .select("id, nome, ativo")
+          .eq("ativo", true);
+
+      if (checklistModelError) throw checklistModelError;
+
+      setChecklistModels((checklistModelData ?? []) as ChecklistModelItem[]);
     } catch (error) {
       console.error("Erro ao carregar detalhe da visita:", error);
       alert("Não foi possível carregar os dados da visita.");
@@ -363,12 +375,14 @@ export default function EntradaSaidaDetalhePage() {
     const statusEmAndamento =
       visita.status === "aberta" || visita.status === "em_andamento";
 
-    const checklistCompleto = requiredChecklistItemIds.every((itemId) =>
-      checklist.some((item) => {
-        const value = item.valor_texto || item.status;
-        return item.item_modelo_id === itemId && !!value;
-      })
-    );
+    const checklistCompleto =
+      requiredChecklistItemIds.length > 0 &&
+      requiredChecklistItemIds.every((itemId) =>
+        checklist.some((item) => {
+          const value = item.valor_texto || item.status;
+          return item.item_modelo_id === itemId && !!value;
+        })
+      );
 
     if (statusEmAndamento || !checklistCompleto) {
       setShowPdfBlockedModal(true);
@@ -425,12 +439,14 @@ export default function EntradaSaidaDetalhePage() {
   const statusEmAndamento =
     visita.status === "aberta" || visita.status === "em_andamento";
 
-  const checklistCompleto = requiredChecklistItemIds.every((itemId) =>
-    checklist.some((item) => {
-      const value = item.valor_texto || item.status;
-      return item.item_modelo_id === itemId && !!value;
-    })
-  );
+  const checklistCompleto =
+    requiredChecklistItemIds.length > 0 &&
+    requiredChecklistItemIds.every((itemId) =>
+      checklist.some((item) => {
+        const value = item.valor_texto || item.status;
+        return item.item_modelo_id === itemId && !!value;
+      })
+    );
 
   const podeGerarPdf = !statusEmAndamento && checklistCompleto;
 
@@ -599,7 +615,7 @@ export default function EntradaSaidaDetalhePage() {
                 className="rounded-3xl border border-zinc-200 bg-[#FAFAFA] p-4"
               >
                 <p className="text-sm font-black text-[#181818]">
-                  {getQuestionTitle(item)}
+                  {getQuestionTitle(item, checklistModelMap)}
                 </p>
 
                 <p className="mt-2 text-lg font-black text-[#181818]">

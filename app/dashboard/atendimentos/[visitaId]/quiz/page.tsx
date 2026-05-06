@@ -1,5 +1,4 @@
 import ChecklistQuiz from "@/app/componets/atendimentos/ChecklistQuiz";
-import { checklistEntradaQuestions } from "@/app/componets/atendimentos/checklistQuestions";
 
 type PageProps = {
   params: Promise<{
@@ -13,7 +12,6 @@ export default async function AtendimentoQuizPage({ params }: PageProps) {
   return (
     <ChecklistQuiz
       visitaId={visitaId}
-      questions={checklistEntradaQuestions}
       tipoChecklist="entrada"
     />
   );

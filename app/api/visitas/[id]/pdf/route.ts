@@ -22,26 +22,10 @@ type ChecklistItem = {
   ordem: number | null;
 };
 
-const requiredChecklistItemIds = [
-  "a1111111-1111-1111-1111-111111111111",
-  "b1111111-1111-1111-1111-111111111111",
-  "b2222222-2222-2222-2222-222222222222",
-  "b3333333-3333-3333-3333-333333333333",
-  "b4444444-4444-4444-4444-444444444444",
-  "c2222222-2222-2222-2222-222222222222",
-  "f1111111-1111-1111-1111-111111111111",
-  "f2222222-2222-2222-2222-222222222222",
-];
-
-const questionLabels: Record<string, string> = {
-  "a1111111-1111-1111-1111-111111111111": "Nivel de combustivel",
-  "b1111111-1111-1111-1111-111111111111": "Pisca esquerdo",
-  "b2222222-2222-2222-2222-222222222222": "Pisca direito",
-  "b3333333-3333-3333-3333-333333333333": "Farol",
-  "b4444444-4444-4444-4444-444444444444": "Buzina",
-  "c2222222-2222-2222-2222-222222222222": "Caximbo de vela",
-  "f1111111-1111-1111-1111-111111111111": "Observacoes da entrada",
-  "f2222222-2222-2222-2222-222222222222": "Foto da entrada",
+type ChecklistModelItem = {
+  id: string;
+  nome: string | null;
+  ativo: boolean | null;
 };
 
 const valueLabels: Record<string, string> = {
@@ -98,9 +82,12 @@ function getChecklistAnswer(item: ChecklistItem) {
   return valueLabels[value] ?? value;
 }
 
-function getQuestionTitle(item: ChecklistItem) {
-  if (item.item_modelo_id && questionLabels[item.item_modelo_id]) {
-    return questionLabels[item.item_modelo_id];
+function getQuestionTitle(
+  item: ChecklistItem,
+  checklistModelMap: Map<string, ChecklistModelItem>
+) {
+  if (item.item_modelo_id) {
+    return checklistModelMap.get(item.item_modelo_id)?.nome ?? "Item do checklist";
   }
 
   return "Item do checklist";
@@ -196,12 +183,28 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     const checklist = (checklistData ?? []) as ChecklistItem[];
 
-    const checklistCompleto = requiredChecklistItemIds.every((itemId) =>
-      checklist.some((item) => {
-        const value = item.valor_texto || item.status;
-        return item.item_modelo_id === itemId && !!value;
-      })
+    const { data: checklistModelData, error: checklistModelError } =
+      await supabase
+        .from("checklist_itens_modelo")
+        .select("id, nome, ativo")
+        .eq("ativo", true);
+
+    if (checklistModelError) throw checklistModelError;
+
+    const checklistModels = (checklistModelData ?? []) as ChecklistModelItem[];
+    const checklistModelMap = new Map(
+      checklistModels.map((item) => [item.id, item])
     );
+    const requiredChecklistItemIds = checklistModels.map((item) => item.id);
+
+    const checklistCompleto =
+      requiredChecklistItemIds.length > 0 &&
+      requiredChecklistItemIds.every((itemId) =>
+        checklist.some((item) => {
+          const value = item.valor_texto || item.status;
+          return item.item_modelo_id === itemId && !!value;
+        })
+      );
 
     if (!checklistCompleto) {
       return NextResponse.json(
@@ -450,7 +453,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       function drawChecklistItem(item: ChecklistItem | undefined, x: number) {
         if (!item) return;
 
-        const title = getQuestionTitle(item);
+        const title = getQuestionTitle(item, checklistModelMap);
         const answer = getChecklistAnswer(item);
 
         page.drawRectangle({

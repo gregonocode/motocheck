@@ -1,3 +1,4 @@
+//app\componets\atendimentos\ChecklistQuiz.tsx
 "use client";
 
 import Link from "next/link";
@@ -21,11 +22,17 @@ import {
   HiOutlineTrash,
 } from "react-icons/hi2";
 import { createClient } from "@/lib/supabase/client";
-import type { ChecklistQuestionItem } from "./checklistQuestions";
+import {
+  PHOTO_QUESTION_ID,
+  mapChecklistModelsToQuestions,
+  type ChecklistCategoriaRow,
+  type ChecklistItemModeloRow,
+  type ChecklistQuestionItem,
+} from "./checklistQuestions";
 
 type ChecklistQuizProps = {
   visitaId: string;
-  questions: ChecklistQuestionItem[];
+  questions?: ChecklistQuestionItem[];
   tipoChecklist?: "entrada" | "saida";
 };
 
@@ -39,7 +46,7 @@ type AtendimentoData = {
 };
 
 type ChecklistRow = {
-  item_modelo_id: string;
+  item_modelo_id: string | null;
   status: string | null;
   valor_texto: string | null;
 };
@@ -48,8 +55,6 @@ type CanvasPoint = {
   x: number;
   y: number;
 };
-
-const PHOTO_QUESTION_ID = "f2222222-2222-2222-2222-222222222222";
 
 const brushColors = [
   { label: "Vermelho", value: "#ef4444" },
@@ -61,7 +66,7 @@ const brushColors = [
 
 export default function ChecklistQuiz({
   visitaId,
-  questions,
+  questions: initialQuestions = [],
   tipoChecklist = "entrada",
 }: ChecklistQuizProps) {
   const router = useRouter();
@@ -73,6 +78,8 @@ export default function ChecklistQuiz({
   const advanceTimeoutRef = useRef<number | null>(null);
 
   const [atendimento, setAtendimento] = useState<AtendimentoData | null>(null);
+  const [questions, setQuestions] =
+    useState<ChecklistQuestionItem[]>(initialQuestions);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [currentStep, setCurrentStep] = useState(0);
   const [textareaValue, setTextareaValue] = useState("");
@@ -91,7 +98,8 @@ export default function ChecklistQuiz({
   const currentQuestion = questions[currentStep];
   const isLastStep = currentStep === totalSteps - 1;
   const isPhotoStep = currentQuestion?.id === PHOTO_QUESTION_ID;
-  const progress = Math.round(((currentStep + 1) / totalSteps) * 100);
+  const progress =
+    totalSteps > 0 ? Math.round(((currentStep + 1) / totalSteps) * 100) : 0;
 
   function formatStatus(status?: string | null) {
     if (status === "aberta" || status === "em_andamento") return "Em andamento";
@@ -104,6 +112,35 @@ export default function ChecklistQuiz({
   async function loadVisitaData() {
     try {
       setLoadingPage(true);
+
+      const [
+        { data: categoriaRows, error: categoriaError },
+        { data: itemRows, error: itemError },
+      ] = await Promise.all([
+        supabase
+          .from("checklist_categorias")
+          .select("id, nome, ordem, ativo")
+          .or("ativo.is.true,ativo.is.null")
+          .order("ordem", { ascending: true }),
+        supabase
+          .from("checklist_itens_modelo")
+          .select("id, categoria_id, nome, descricao, ordem, ativo")
+          .or("ativo.is.true,ativo.is.null")
+          .order("ordem", { ascending: true }),
+      ]);
+
+      if (categoriaError) throw categoriaError;
+      if (itemError) throw itemError;
+
+      const loadedQuestions = mapChecklistModelsToQuestions(
+        (itemRows ?? []) as ChecklistItemModeloRow[],
+        (categoriaRows ?? []) as ChecklistCategoriaRow[]
+      );
+      const activeQuestions =
+        loadedQuestions.length > 0 ? loadedQuestions : initialQuestions;
+
+      setQuestions(activeQuestions);
+      setCurrentStep(0);
 
       const { data: visita, error: visitaError } = await supabase
         .from("visitas")
@@ -162,11 +199,13 @@ export default function ChecklistQuiz({
       const answerMap: Record<string, string> = {};
 
       checklistRows?.forEach((row: ChecklistRow) => {
-        answerMap[row.item_modelo_id] = row.valor_texto ?? row.status ?? "";
+        if (row.item_modelo_id) {
+          answerMap[row.item_modelo_id] = row.valor_texto ?? row.status ?? "";
+        }
       });
 
       setAnswers(answerMap);
-      setTextareaValue(answerMap[questions[0]?.id] ?? "");
+      setTextareaValue(answerMap[activeQuestions[0]?.id] ?? "");
     } catch (error) {
       console.error("Erro ao carregar quiz:", error);
       toast.error("Não foi possível carregar o quiz.");
@@ -181,26 +220,6 @@ export default function ChecklistQuiz({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visitaId]);
-
-  useEffect(() => {
-    void Promise.resolve().then(() => {
-      setTextareaValue(answers[currentQuestion?.id] ?? "");
-    });
-  }, [currentQuestion?.id, answers]);
-
-  useEffect(() => {
-    if (photoDataUrl) {
-      drawImageOnCanvas(photoDataUrl);
-    }
-  }, [photoDataUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (advanceTimeoutRef.current) {
-        window.clearTimeout(advanceTimeoutRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     void Promise.resolve().then(() => {
@@ -231,6 +250,26 @@ export default function ChecklistQuiz({
           setCheckingDevice(false);
         });
     });
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      setTextareaValue(answers[currentQuestion?.id] ?? "");
+    });
+  }, [currentQuestion?.id, answers]);
+
+  useEffect(() => {
+    if (photoDataUrl) {
+      drawImageOnCanvas(photoDataUrl);
+    }
+  }, [photoDataUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (advanceTimeoutRef.current) {
+        window.clearTimeout(advanceTimeoutRef.current);
+      }
+    };
   }, []);
 
   function drawImageOnCanvas(dataUrl: string) {
@@ -661,7 +700,6 @@ export default function ChecklistQuiz({
                   Gerando QR Code...
                 </div>
               )}
-
             </div>
 
             <div className="mt-6 grid gap-3">

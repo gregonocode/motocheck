@@ -195,6 +195,13 @@ export default function AtendimentosPage() {
             Voltar ao dashboard
           </Link>
 
+          <Link
+            href="/dashboard/atendimentos/checklist"
+            className="rounded-2xl border border-zinc-300 bg-white px-5 py-4 text-sm font-extrabold text-[#181818] transition hover:bg-zinc-50"
+          >
+            Configurar checklist
+          </Link>
+
           <button className="rounded-2xl bg-[#181818] px-5 py-4 text-sm font-extrabold text-white transition hover:opacity-95">
             Novo atendimento
           </button>
