@@ -1,3 +1,4 @@
+//app\componets\atendimentos\checklistQuestions.ts
 export type ChecklistQuestionOption = {
   label: string;
   value: string;
@@ -101,27 +102,16 @@ export function mapChecklistModelsToQuestions(
   items: ChecklistItemModeloRow[],
   categories: ChecklistCategoriaRow[]
 ): ChecklistQuestionItem[] {
-  const categoryMap = new Map(
-    categories.map((category) => [category.id, category])
-  );
+  const categoryMap = new Map(categories.map((category) => [category.id, category]));
 
-  const activeItems = items.filter(
-    (item) => item.ativo !== false && item.categoria_id
-  );
-
-  const photoItem = activeItems.find((item) => item.id === PHOTO_QUESTION_ID);
-
-  const normalItems = activeItems
-    .filter((item) => item.id !== PHOTO_QUESTION_ID)
+  return items
+    .filter((item) => item.ativo !== false && item.categoria_id)
     .sort((a, b) => {
-      const categoryA = a.categoria_id
-        ? categoryMap.get(a.categoria_id)
-        : null;
+      if (a.id === PHOTO_QUESTION_ID) return 1;
+      if (b.id === PHOTO_QUESTION_ID) return -1;
 
-      const categoryB = b.categoria_id
-        ? categoryMap.get(b.categoria_id)
-        : null;
-
+      const categoryA = a.categoria_id ? categoryMap.get(a.categoria_id) : null;
+      const categoryB = b.categoria_id ? categoryMap.get(b.categoria_id) : null;
       const categoryOrderA = categoryA?.ordem ?? Number.MAX_SAFE_INTEGER;
       const categoryOrderB = categoryB?.ordem ?? Number.MAX_SAFE_INTEGER;
 
@@ -130,27 +120,21 @@ export function mapChecklistModelsToQuestions(
       }
 
       return (a.ordem ?? 0) - (b.ordem ?? 0);
+    })
+    .map((item) => {
+      const category = item.categoria_id ? categoryMap.get(item.categoria_id) : undefined;
+      const type = getQuestionType(item);
+
+      return {
+        id: item.id,
+        categoriaId: item.categoria_id ?? "",
+        title: item.nome ?? "Item do checklist",
+        description: item.descricao ?? undefined,
+        type,
+        options: type === "options" ? getQuestionOptions(item, category) : undefined,
+        placeholder: getQuestionPlaceholder(item),
+      };
     });
-
-  const orderedItems = photoItem ? [...normalItems, photoItem] : normalItems;
-
-  return orderedItems.map((item) => {
-    const category = item.categoria_id
-      ? categoryMap.get(item.categoria_id)
-      : undefined;
-
-    const type = getQuestionType(item);
-
-    return {
-      id: item.id,
-      categoriaId: item.categoria_id ?? "",
-      title: item.nome ?? "Item do checklist",
-      description: item.descricao ?? undefined,
-      type,
-      options: type === "options" ? getQuestionOptions(item, category) : undefined,
-      placeholder: getQuestionPlaceholder(item),
-    };
-  });
 }
 
 export const checklistEntradaQuestions: ChecklistQuestionItem[] = [];

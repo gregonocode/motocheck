@@ -21,7 +21,7 @@ import {
 } from "react-icons/hi2";
 import { FaCheckCircle } from "react-icons/fa";
 import { CgSearchFound } from "react-icons/cg";
-import { Settings, Zap } from "lucide-react";
+import { Plus, Settings, Zap } from "lucide-react";
 
 type DashboardResumo = {
   motos_cadastradas: number;
@@ -582,33 +582,47 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="w-full max-w-xl">
-              <div className="flex w-full max-w-xl items-center gap-3 rounded-2xl border border-zinc-300 bg-white px-4 py-4">
-                <HiOutlineMagnifyingGlass className="text-xl text-zinc-500" />
+            <div className="w-full max-w-2xl">
+              <div className="flex w-full flex-col gap-3 sm:flex-row">
+                <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-zinc-300 bg-white px-4 py-4">
+                  <HiOutlineMagnifyingGlass className="shrink-0 text-xl text-zinc-500" />
 
-                <input
-                  type="text"
-                  value={plate}
-                  onChange={(e) => {
-                    setPlate(e.target.value.toUpperCase());
-                    if (searchError) setSearchError("");
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSearchVehicle();
-                    }
-                  }}
-                  placeholder="Ex: QWE1A23"
-                  className="w-full bg-transparent text-base font-semibold uppercase text-[#181818] outline-none placeholder:text-zinc-400"
-                />
+                  <input
+                    type="text"
+                    value={plate}
+                    onChange={(e) => {
+                      setPlate(e.target.value.toUpperCase());
+                      if (searchError) setSearchError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSearchVehicle();
+                      }
+                    }}
+                    placeholder="Ex: QWE1A23"
+                    className="w-full min-w-0 bg-transparent text-base font-semibold uppercase text-[#181818] outline-none placeholder:text-zinc-400"
+                  />
+
+                  <button
+                    onClick={() => handleSearchVehicle()}
+                    disabled={searchingVehicle}
+                    className="shrink-0 rounded-xl bg-[#181818] px-4 py-2 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {searchingVehicle ? "Buscando..." : "Buscar"}
+                  </button>
+                </div>
 
                 <button
-                  onClick={() => handleSearchVehicle()}
-                  disabled={searchingVehicle}
-                  className="rounded-xl bg-[#181818] px-4 py-2 text-sm font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-70"
+                  type="button"
+                  onClick={() => {
+                    setSelectedVehicle(null);
+                    setCreateVehicleModalOpen(true);
+                  }}
+                  className="inline-flex h-[58px] shrink-0 items-center justify-center gap-2 rounded-2xl bg-yellow-200 px-5 text-sm font-extrabold text-[#181818] transition hover:opacity-95 active:scale-[0.98]"
                 >
-                  {searchingVehicle ? "Buscando..." : "Buscar"}
+                  <Plus size={18} />
+                  Cadastrar
                 </button>
               </div>
 
